@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include <mutex>
 #include <cassert>
 #include <type_traits>
 

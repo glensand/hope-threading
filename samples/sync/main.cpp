@@ -7,19 +7,22 @@
  */
 
 #include <iostream>
+#include <mutex>
+#include <atomic>
+
+void lock_exclusive(std::recursive_mutex& m) {
+    m.lock();
+}
+
+void unlock_exclusive(std::recursive_mutex& m) {
+    m.unlock();
+}
+
 #include "jerk-thread/synchronization/object_safe_wrapper.h"
 
 struct object final{
     int lol;
 };
-
-void lock(std::recursive_mutex& m){
-    m.lock();
-}
-
-void unlock(std::recursive_mutex& m){
-    m.unlock();
-}
 
 int main() {
     object_safe_wrapper<object, std::recursive_mutex, 
@@ -27,4 +30,7 @@ int main() {
 
     safe.lock();
     safe.unlock();
+
+    std::atomic<uint64_t> atomic;
+    std::cout << atomic.is_lock_free() << std::endl;
 } 
