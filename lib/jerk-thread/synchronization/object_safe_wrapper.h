@@ -13,64 +13,73 @@
 
 #include "jerk-thread/synchronization/detector.h"
 
-template<
-    typename TObject, 
-    typename TMutex, 
-    typename TExclusiveLock,
-    typename TSharedLock = TExclusiveLock>
-class object_safe_wrapper final {
-public:
-    
-    template<typename... TArgs>
-    object_safe_wrapper(TArgs&&... args) 
-        : m_object(std::forward<TArgs>(args)...){}
+namespace jt {
 
-    void lock() { lock_impl(m_object_guard, true); }
-    void unlock() { lock_impl(m_object_guard, false); }
+    template<
+        typename TObject,
+        typename TMutex,
+        template <typename> typename TExclusiveLock,
+        template <typename> typename TSharedLock = TExclusiveLock>
+    class object_safe_wrapper final {
+    public:
 
-    void lock_read() { lock_shared_impl(m_object_guard, true); }
-    void unlock_read() { unlock_shared_impl(m_object_guard, false); }
+        template<typename... TArgs>
+        object_safe_wrapper(TArgs&&... args)
+            : m_object(std::forward<TArgs>(args)...) {}
 
-    auto operator -> () { return locker<TExclusiveLock>(&m_object, m_object_guard); }
-    auto operator * () { return locker<TExclusiveLock>(&m_object, m_object_guard); }
+        void lock() const { lock_impl(m_object_guard, true); }
+        void unlock() const { lock_impl(m_object_guard, false); }
 
-    auto operator -> () const { return locker<TSharedLock>(&m_object, m_object_guard); }
-    auto operator * () const { return locker<TSharedLock>(&m_object, m_object_guard); }
-private:
+        void lock_shared() const { lock_shared_impl(m_object_guard, true); }
+        void unlock_shared() const { lock_shared_impl(m_object_guard, false); }
 
-    template<typename T>
-    using lock_exclusive_t = decltype(lock_exclusive(std::declval<T&>()));
+        decltype(auto) raw() { return m_object; }
+        decltype(auto) raw() const { return m_object; }
 
-    template<typename T>
-    using lock_shared_t = decltype(lock_shared(std::declval<T&>()));
-    
-    template<typename TGuard> // just for sfinae
-    void lock_impl(TGuard& guard, bool lock_flag) {
-        if constexpr (is_detected_v<lock_exclusive_t, TMutex>) {
-            if (lock_flag) {
-                lock_exclusive(guard);
-            } else {
-                unlock_exclusive(guard);
+        decltype(auto) operator -> () { return locker<TExclusiveLock<TMutex>>(&m_object, m_object_guard); }
+        decltype(auto) operator * () { return locker<TExclusiveLock<TMutex>>(&m_object, m_object_guard); }
+
+        decltype(auto) operator -> () const { return locker<TSharedLock<TMutex>>(&m_object, (TMutex&)m_object_guard); }
+        decltype(auto) operator * () const { return locker<TSharedLock<TMutex>>(&m_object, (TMutex&)m_object_guard); }
+    private:
+
+        template<typename T>
+        using lock_exclusive_t = decltype(std::declval<T>().lock());
+
+        template<typename T>
+        using lock_shared_t = decltype(std::declval<T>().lock_shared());
+
+        template<typename TGuard> // just for sfinae
+        void lock_impl(TGuard& guard, bool lock_flag) const {
+            if constexpr (is_detected_v<lock_exclusive_t, TMutex>) {
+                if (lock_flag) {
+                    guard.lock();
+                }
+                else {
+                    guard.unlock();
+                }
             }
-        } else {
-            assert(false && "To acquire lock on the object should be implemented global functions:"
-            "lock_exclusive, unlock_exclusive");
-        }
-    }
-
-    template<typename TGuard> // just for sfinae
-    void lock_shared_impl(TGuard& guard, bool lock_flag) {
-        if (is_detected_v<lock_shared_t, TMutex>) {
-            if (lock_flag) {
-                lock_shared(guard);
-            } else {
-                unlock_shared(guard);
+            else {
+                assert(false && "To acquire lock on the object should be implemented global functions:"
+                    "lock_exclusive, unlock_exclusive");
             }
-        } else {
-            assert(false && "To acquire lock on the object should be implemented global functions:"
-            "lock_shared, unlock_shared");
         }
-    }
+
+        template<typename TGuard> // just for sfinae
+        void lock_shared_impl(TGuard& guard, bool lock_flag) const {
+            if (is_detected_v<lock_shared_t, TMutex>) {
+                if (lock_flag) {
+                    guard.lock_shared();
+                }
+                else {
+                    guard.unlock_shared();
+                }
+            }
+            else {
+                assert(false && "To acquire lock on the object should be implemented global functions:"
+                    "lock_shared, unlock_shared");
+            }
+        }
 
     template<typename TLock>
     class locker final {
@@ -80,10 +89,10 @@ private:
             : m_object(rhs.m_object)
             , m_lock(std::move(rhs.m_lock)) { 
                 rhs.m_object = nullptr;
-            }
+        }
 
-        locker(TObject * const object, TMutex& mutex) 
-            : m_object(object)
+        locker(const TObject * const object, TMutex& mutex) 
+            : m_object((TObject*)object)
             , m_lock(mutex){}
         
         TObject* operator -> () { return m_object; }
@@ -99,6 +108,9 @@ private:
         TLock m_lock;
     };
 
-    TObject m_object;
-    TMutex m_object_guard;
-};
+        TObject m_object;
+        mutable TMutex m_object_guard;
+    };
+
+}
+

@@ -9,6 +9,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out)
 
 file(GLOB CL_HEADERS
     jerk-thread/*.h
+    jerk-thread/platform/*.h
     jerk-thread/containers/*.h
     jerk-thread/synchronization/*.h
 )
