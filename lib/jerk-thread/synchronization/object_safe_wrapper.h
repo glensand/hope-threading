@@ -85,9 +85,9 @@ namespace jt {
     class locker final {
         TObject * const m_object;
     public:
-        locker(locker&& rhs) 
+        locker(locker&& rhs) noexcept
             : m_object(rhs.m_object)
-            , m_lock(std::move(rhs.m_lock)) { 
+              , m_lock(std::move(rhs.m_lock)) { 
                 rhs.m_object = nullptr;
         }
 

@@ -52,7 +52,7 @@ namespace jt {
 
 	// Non recursive(in common meaning) read-write spinlock;
 	// Read operation could not be upgraded to Write (to upgrade you should release readlock on this thread and then acquire write lock, NOTE: such op is not atomic)
-	// Read lock is recursive by design(if readlock acquired several times it is ok, but may cause infinite loops (deadlocks) even if the contention is very low)
+	// Read lock is recursive by design
 	// Write operation also could not be doungraded to read
 	// In conclusion these sequences causes infinite loop when called from one thread: Write -> Read, Read -> Write, Write -> Write
 	// TODO: RW spinlock might be upgraded to full recursive rw lock(TLS should be used for this purpose). In TLS thread's state should be stored (read, write, nostate)
@@ -88,14 +88,8 @@ namespace jt {
 			for (;;)
 			{
 				// Optimistically assume the lock is free on the first try
-				if (((m_lock += 0x100000) & 0xfff00000) == 0x100000) {
-					// We are the only one writer
-					// Wait for active readers to release their locks
-					while (m_lock.load(std::memory_order_acquire) & 0x000fffff)
-						BACK_OFF;
-
+				if ((m_lock += 0x100000) == 0x100000)
 					return;
-				}
 
 				// Another writer held the lock before usand we failed.
 				// In that case, we atomically decrement the number of writers(using an atomic subtract) and try again
@@ -187,8 +181,8 @@ namespace jt {
 
 
 	// almost recursive shared lock:
-	// works with sequencies: S->S, X->X, X->S
-	// S->X causes deadlock, also S->S might cause a deadlock in case of contention
+	// works with sequences: S->S, X->X, X->S
+	// S->X causes deadlock
 	class recursive_rw_spinlock final {
 	public:
 		recursive_rw_spinlock() = default;
@@ -218,7 +212,7 @@ namespace jt {
 		}
 
 		void unlock_shared() noexcept {
-			if (check_for_recursion()) {
+			if (m_write_recursion_depth == 0) { // no writers on this thread, only readers
 				--m_lock;
 			}
 		}
@@ -231,11 +225,7 @@ namespace jt {
 
 			for (;;) {
 				// Optimistically assume the lock is free on the first try
-				if (((m_lock += 0x100000) & ExclusiveMask) == 0x100000) {
-					// We are the only one writer
-					// Wait for active readers to release their locks
-					while (m_lock.load(std::memory_order_acquire) & SharedMask)
-						BACK_OFF;
+				if ((m_lock += 0x100000) == 0x100000) {
 
 					const uint64_t this_id = ((uint64_t)tls::get_thread_id()) << 32;
 					assert(0 == (this_id & (ExclusiveMask | SharedMask)));

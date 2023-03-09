@@ -31,11 +31,13 @@ int main() {
     for (std::size_t i { 0 }; i < 10; ++i) {
         const auto& cv = safevector;
         threads.emplace_back([&cv] {
-            const std::unique_lock lock(cv);
-            const std::shared_lock lock2(cv);
-            const std::shared_lock lock3(cv);
-            for (auto&& v : cv.raw())
-                std::cout << v << '\n';
+            for (std::size_t j{ 0 }; j < 10; ++j) {
+                const std::shared_lock lock(cv);
+                const std::shared_lock lock2(cv);
+                const std::shared_lock lock3(cv);
+                for (auto&& v : cv.raw())
+                    std::cout << v << '\n';
+            }
         });
     }
 
