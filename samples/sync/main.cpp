@@ -11,6 +11,7 @@
 #include <shared_mutex>
 #include <atomic>
 #include <vector>
+#include <thread>
 
 #include "jerk-thread/synchronization/spinlock.h"
 #include "jerk-thread/synchronization/object_safe_wrapper.h"

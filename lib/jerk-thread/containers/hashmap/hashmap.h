@@ -7,14 +7,3 @@
  */
 
 #pragma once
-
-#undef BACK_OFF
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
-#   include <immintrin.h>
-#   define BACK_OFF _mm_pause()
-#elif defined(__clang__)
-// #	include <xmmintrin.h>
-#	define BACK_OFF
-#else
-#   define BACK_OFF
-#endif
