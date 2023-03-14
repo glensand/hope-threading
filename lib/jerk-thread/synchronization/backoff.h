@@ -8,13 +8,32 @@
 
 #pragma once
 
-#undef BACK_OFF
+#include <thread>
+
+#undef SYSTEM_PAUSE
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 #   include <immintrin.h>
-#   define BACK_OFF _mm_pause()
+#   define SYSTEM_PAUSE _mm_pause()
 #elif defined(__clang__)
 // #	include <xmmintrin.h>
-#	define BACK_OFF
+#	define SYSTEM_PAUSE
 #else
-#   define BACK_OFF
+#   define SYSTEM_PAUSE
 #endif
+
+class exponential_backoff final {
+public:
+    void operator()(){
+        if (m_spins <= MaxSpinsCount){
+            for (std::size_t i{ 0 }; i < m_spins; ++i)
+                SYSTEM_PAUSE;
+            m_spins = m_spins << 1;
+        } else {
+            std::this_thread::yield();
+        }
+    }
+
+private:
+    constexpr static std::size_t MaxSpinsCount = 32;
+    std::size_t m_spins{ 0 };
+};
