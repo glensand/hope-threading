@@ -22,7 +22,6 @@ namespace jt {
 		spinlock() = default;
 
 		void lock() {
-			exponential_backoff backoff;
 			for (;;) {
 				// Optimistically assume the lock is free on the first try
 				if (!m_lock.exchange(true, std::memory_order_acquire))
@@ -30,7 +29,7 @@ namespace jt {
 
 				// Wait for lock to be released without generating cache misses
 				while (m_lock.load(std::memory_order_relaxed))
-					backoff();
+					SYSTEM_PAUSE;
 			}
 		}
 
@@ -68,16 +67,13 @@ namespace jt {
 				if (((++m_lock) & 0xfff00000) == 0)
 					// No active writer, acquired successfully
 					return;
-
-				exponential_backoff backoff;
-
 				// if any of writer bits are set, it means that a writer held the lock before us and we failed.
 				// In that case, we atomically decrement the lock value and try again
 				--m_lock;
 
 				// Wait for lock to be released without generating cache misses
 				while (m_lock.load(std::memory_order_relaxed) & 0xfff00000)
-					backoff();
+					SYSTEM_PAUSE;
 			}
 		}
 
@@ -86,7 +82,6 @@ namespace jt {
 		}
 
 		void lock() {
-			exponential_backoff backoff;
 			for (;;)
 			{
 				// Optimistically assume the lock is free on the first try
@@ -99,7 +94,7 @@ namespace jt {
 
 				// Wait until there's no active writer
 				while (m_lock.load(std::memory_order_relaxed) & 0xfff00000)
-					backoff();
+					SYSTEM_PAUSE;
 			}
 		}
 
@@ -128,9 +123,6 @@ namespace jt {
 				// Recursion branch, the lock is already acquired, we are the SLAVE ;D
 				return;
 			}
-
-			exponential_backoff backoff;
-
 			for (;;) {
 				// Optimistically assume the lock is free on the first try
 				auto Expected = Free;
@@ -143,7 +135,7 @@ namespace jt {
 				// Wait for lock to be released without generating cache misses
 				while (m_owner_id.load(std::memory_order_relaxed) != Free)
 					// Issue X86 PAUSE instruction to reduce contention between hyper-threads
-					backoff();
+					SYSTEM_PAUSE;
 			}
 		}
 
@@ -198,8 +190,6 @@ namespace jt {
 				return;
 			}
 
-			exponential_backoff backoff;
-			
 			for (;;) {
 				// Optimistically assume the lock is free on the first try
 				if (((++m_lock) & ExclusiveMask) == 0)
@@ -213,7 +203,7 @@ namespace jt {
 				// Wait for lock to be released without generating cache misses
 				while (m_lock.load(std::memory_order_relaxed) & ExclusiveMask)
 					// Here and below issue X86 PAUSE instruction to reduce contention between hyper-threads
-					backoff();
+					SYSTEM_PAUSE;
 			}
 		}
 
@@ -228,9 +218,6 @@ namespace jt {
 				++m_write_recursion_depth;
 				return;
 			}
-
-			exponential_backoff backoff;
-
 			for (;;) {
 				// Optimistically assume the lock is free on the first try
 				if ((m_lock += 0x100000) == 0x100000) {
@@ -249,7 +236,7 @@ namespace jt {
 
 				// Wait until there's no active writer
 				while (m_lock.load(std::memory_order_relaxed) & ExclusiveMask)
-					backoff();
+					SYSTEM_PAUSE;
 			}
 		}
 
