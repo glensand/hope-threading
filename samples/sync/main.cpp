@@ -20,6 +20,7 @@
 #include "jerk-thread/containers/queue/sutter_queue.h"
 #include "jerk-thread/containers/queue/spsc_queue.h"
 #include "jerk-thread/containers/queue/mpsc_queue.h"
+#include "jerk-thread/containers/hashmap/hash_storage.h"
 
 int main() {
 
