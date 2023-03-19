@@ -12,22 +12,32 @@
 #include <vector>
 #include <list>
 #include <atomic>
+#include <mutex>
+#include <shared_mutex>
 
 #include "jerk-thread/synchronization/spinlock.h"
 
 namespace jt {
 
+    template<typename TValue>
+    struct trivial_equal_operator final {
+        bool operator()(const TValue& a, const TValue& b) const noexcept { 
+            return a == b;
+        }
+    };
+
+    // TODO:: add allocator
     template<typename TValue, 
-        typename TEqual, 
-        typename THasher, 
-        typename TMutex, 
-        template <typename> typename TExclusiveLock,
-        template <typename> typename TSharedLock = TExclusiveLock,
+        typename THasher = std::hash<TValue>,
+        typename TEqual = trivial_equal_operator<TValue>,
+        typename TMutex = rw_spinlock,
+        template <typename> typename TExclusiveLock = std::unique_lock,
+        template <typename> typename TSharedLock = std::shared_lock,
         std::size_t BucketsCount = 8,
         std::size_t ResizeFactor = 2
-        >
+    >
     class hash_storage final {
-        static_assert(BucketsCount % 2 == 0);
+        static_assert((BucketsCount & (BucketsCount - 1)) == 0);
     public: 
         using shared_lock_t = TSharedLock<TMutex>;
         using exclusive_lock_t = TExclusiveLock<TMutex>;
@@ -77,7 +87,7 @@ namespace jt {
             return new_element;
         }
 
-        bool obtain(TValue& value) const {
+        bool obtain(TValue& value) const noexcept {
             const std::size_t hash = m_hasher(value);
             auto&& bucket = m_storage[hash % BucketsCount];
             const shared_lock_t lock(bucket.guard);
@@ -88,14 +98,14 @@ namespace jt {
             return obtained != nullptr;
         }
 
-        const TValue* find(const TValue& value) const {
+        const TValue* find(const TValue& value) const noexcept {
             const std::size_t hash = m_hasher(value);
             auto&& bucket = m_storage[hash % BucketsCount];
             const shared_lock_t lock(bucket.guard);
             return find_locked(hash, value, bucket.bucket);
         }
 
-        void remove(const TValue& value){
+        void remove(const TValue& value) noexcept {
             const std::size_t hash = m_hasher(value);
             auto&& bucket = m_storage[hash % BucketsCount];
             const exclusive_lock_t lock(bucket.guard);
@@ -108,6 +118,25 @@ namespace jt {
             if (removed)
                 m_size.fetch_add(-1, std::memory_order_release);
         }
+
+        void lock_bucket(const TValue& value, bool shared = false) noexcept {
+            auto&& bucket = m_storage[m_hash(value) % BucketsCount];
+            if (shared)
+                bucket.lock_shared();
+            else
+                bucket.lock();
+        }
+
+        void unlock_bucket(const TValue& value, bool shared = false) noexcept {
+            auto&& bucket = m_storage[m_hash(value) % BucketsCount];
+            if (shared)
+                bucket.unlock_shared();
+            else
+                bucket.unlock();
+        }
+
+        std::size_t size() const noexcept { return m_size.load(std::memory_order_acquire); }
+        std::size_t capacity() const noexcept { return m_capacity.load(std::memory_order_acquire); }
 
     private:
         const TValue* find_locked(std::size_t hash, const TValue& value, const bucket_t& bucket) const {
