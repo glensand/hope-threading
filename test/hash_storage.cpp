@@ -7,14 +7,14 @@
  */
 
 #include "gtest/gtest.h"
-#include "jerk-thread/containers/hashmap/hash_storage.h"
+#include "jerk-thread/containers/hashmap/hash_set.h"
 #include "jerk-thread/synchronization/spinlock.h"
 
 #include <mutex>
 #include <shared_mutex>
 
 template<typename TValue>
-using storage_t = jt::hash_storage<TValue>;
+using storage_t = jt::hash_set<TValue>;
 
 template<typename TStorage, typename TPostFunction, typename... TFunction>
 void perform_work(std::size_t threads_count, std::size_t elements_count, 
@@ -46,7 +46,7 @@ void add_find(std::size_t threads_count) {
             ASSERT_TRUE(storage.size() == ElementsCount);
         }, 
         [](storage_t<int>& storage, std::size_t i) {
-            storage.add(i);
+            storage.emplace(i);
         }, 
         [](storage_t<int>& storage, std::size_t i) {
             auto volatile f = storage.find(i);
@@ -61,7 +61,7 @@ void add_remove(std::size_t threads_count) {
             ASSERT_TRUE(storage.size() == 0);
         }, 
         [](storage_t<int>& storage, std::size_t i) {
-            storage.add(i);
+            storage.emplace(i);
         }, 
         [](storage_t<int>& storage, std::size_t i) {
             auto volatile f = storage.find(i);

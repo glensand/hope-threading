@@ -27,7 +27,9 @@ namespace jt {
     };
 
     // TODO:: add allocator
-    template<typename TValue, 
+    template<typename TValue,
+        typename TValueAssigner,
+        typename TKeyExtractor,
         typename THasher = std::hash<TValue>,
         typename TEqual = trivial_equal_operator<TValue>,
         typename TMutex = rw_spinlock,
@@ -58,8 +60,10 @@ namespace jt {
                 b.bucket.resize(1);
         }
 
-        bool add(TValue value){
-            const std::size_t hash = m_hasher(value);
+        template<typename... Ts>
+        bool emplace(Ts&&... value) {
+            auto&& key = m_key_extractor(value...);
+            const std::size_t hash = m_hasher(key);
             auto&& bucket = m_storage[hash % BucketsCount];
             // todo:: flat-combining?
             bool new_element = true;
@@ -68,15 +72,15 @@ namespace jt {
                 const std::size_t sub_bucket_id = hash % bucket.bucket.size();
                 auto&& collizion_list = bucket.bucket[sub_bucket_id];
                 auto&& found = std::find_if(begin(collizion_list), end(collizion_list), 
-                [this, &value] (const TValue& candidate){
-                    return m_equal(candidate, value);
+                [this, &key] (const TValue& candidate){
+                    return m_equal(m_key_extractor(candidate), key);
                 });
 
                 if (found != end(collizion_list)){
                     new_element = false;
-                    *found = std::move(value); // renew the value
+                    m_value_assigner(*found, std::forward<Ts>(value)...); // renew the value
                 } else {
-                    collizion_list.push_front(std::move(value));
+                    collizion_list.emplace_front(std::forward<Ts>(value)...);
                     m_size.fetch_add(1, std::memory_order_release);
                 }
                 bucket.changed_while_resize = true;
@@ -98,14 +102,16 @@ namespace jt {
             return obtained != nullptr;
         }
 
-        const TValue* find(const TValue& value) const noexcept {
+        template<typename TKey>
+        const TValue* find(const TKey& value) const noexcept {
             const std::size_t hash = m_hasher(value);
             auto&& bucket = m_storage[hash % BucketsCount];
             const shared_lock_t lock(bucket.guard);
             return find_locked(hash, value, bucket.bucket);
         }
 
-        void remove(const TValue& value) noexcept {
+        template<typename TKey>
+        void remove(const TKey& value) noexcept {
             const std::size_t hash = m_hasher(value);
             auto&& bucket = m_storage[hash % BucketsCount];
             const exclusive_lock_t lock(bucket.guard);
@@ -119,16 +125,18 @@ namespace jt {
                 m_size.fetch_add(-1, std::memory_order_release);
         }
 
-        void lock_bucket(const TValue& value, bool shared = false) noexcept {
-            auto&& bucket = m_storage[m_hash(value) % BucketsCount];
+        template<typename TKey>
+        void lock_bucket(const TKey& key, bool shared = false) noexcept {
+            auto&& bucket = m_storage[m_hash(key) % BucketsCount];
             if (shared)
                 bucket.lock_shared();
             else
                 bucket.lock();
         }
 
-        void unlock_bucket(const TValue& value, bool shared = false) noexcept {
-            auto&& bucket = m_storage[m_hash(value) % BucketsCount];
+        template<typename TKey>
+        void unlock_bucket(const TKey& key, bool shared = false) noexcept {
+            auto&& bucket = m_storage[m_hash(key) % BucketsCount];
             if (shared)
                 bucket.unlock_shared();
             else
@@ -199,6 +207,8 @@ namespace jt {
         std::atomic<std::size_t> m_size = 0u;
         std::atomic<std::size_t> m_capacity = BucketsCount;
 
+        TKeyExtractor m_key_extractor;
+        TValueAssigner m_value_assigner;
         THasher m_hasher;
         TEqual m_equal;
         storage_t m_storage;

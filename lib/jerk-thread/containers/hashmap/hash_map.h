@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "jerk-thread/synchronization/hash_storage.h"
+#include "jerk-thread/containers/hashmap/hash_storage.h"
 
 namespace jt {
 
@@ -29,7 +29,7 @@ namespace jt {
             return m_storage.add(key_value_t(k, TValue(std::forward<Ts>(vs)...)));
         }
 
-        bool obtain(const TKey& k, TValue& v) {
+        bool obtain(const TKey& k, TValue& v) const noexcept {
             key_value_t kv(k, {});
             const bool obtained = m_storage.obtain(kv);
             if (obtained)
@@ -37,13 +37,17 @@ namespace jt {
             return obtained;
         }
 
-        std::optional<TValue> get(const TKey& k) {
+        std::optional<TValue> get(const TKey& k) const noexcept {
             key_value_t kv(k, {});
             const bool obtained = m_storage.obtain(kv);
             std::optional<TValue> ov;
             if (obtained)
                 ov = kv.value;
             return ov;
+        }
+
+        void remove(const TKey& k) {
+            m_storage.remove(k);
         }
     private:
         hash_storage<key_value_t, THasher, TEqual, 

@@ -8,11 +8,24 @@
 
 #pragma once
 
-#include "jerk-thread/synchronization/hash_storage.h"
+#include "jerk-thread/containers/hashmap/hash_storage.h"
 
 namespace jt {
 
-    template<typename TValue, 
+    template<typename TValue>
+    struct value_assigner final {
+        // do nothing
+        template<typename T>
+        void operator()(TValue& lhs, T&& rhs) const { }
+    };
+
+    template<typename TValue>
+    struct key_extractor final {
+        // do nothing
+        const TValue& operator()(const TValue& v) const noexcept { return v; }
+    };
+
+    template<typename TValue,
         typename THasher = std::hash<TValue>,
         typename TEqual = trivial_equal_operator<TValue>,
         typename TMutex = rw_spinlock,
@@ -21,6 +34,6 @@ namespace jt {
         std::size_t BucketsCount = 8,
         std::size_t ResizeFactor = 2
     >
-    using hash_set = hash_storage<TValue, THasher, 
+    using hash_set = hash_storage<TValue, value_assigner<TValue>, key_extractor<TValue>, THasher, 
         TEqual, TMutex, TExclusiveLock, TSharedLock, BucketsCount, ResizeFactor>;
 }
