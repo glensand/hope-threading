@@ -21,19 +21,24 @@
 #   define SYSTEM_PAUSE
 #endif
 
-class exponential_backoff final {
-public:
-    void operator()(){
-        if (m_spins <= MaxSpinsCount){
-            for (std::size_t i{ 0 }; i < m_spins; ++i)
-                SYSTEM_PAUSE;
-            m_spins = m_spins << 1;
-        } else {
-            std::this_thread::yield();
-        }
-    }
+namespace jt {
 
-private:
-    constexpr static std::size_t MaxSpinsCount = 32;
-    std::size_t m_spins{ 0 };
-};
+    class exponential_backoff final {
+    public:
+        void operator()() {
+            if (m_spins <= MaxSpinsCount) {
+                for (std::size_t i{ 0 }; i < m_spins; ++i)
+                    SYSTEM_PAUSE;
+                m_spins = m_spins << 1;
+            }
+            else {
+                std::this_thread::yield();
+            }
+        }
+
+    private:
+        constexpr static std::size_t MaxSpinsCount = 32;
+        std::size_t m_spins{ 0 };
+    };
+
+}

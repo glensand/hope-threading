@@ -36,11 +36,11 @@ namespace jt {
         decltype(auto) raw() { return m_object; }
         decltype(auto) raw() const { return m_object; }
 
-        decltype(auto) operator -> () { return locker<TExclusiveLock<TMutex>>(&m_object, m_object_guard); }
-        decltype(auto) operator * () { return locker<TExclusiveLock<TMutex>>(&m_object, m_object_guard); }
+        decltype(auto) operator -> () { return proxy<TExclusiveLock<TMutex>>(&m_object, m_object_guard); }
+        decltype(auto) operator * () { return proxy<TExclusiveLock<TMutex>>(&m_object, m_object_guard); }
 
-        decltype(auto) operator -> () const { return locker<TSharedLock<TMutex>>(&m_object, (TMutex&)m_object_guard); }
-        decltype(auto) operator * () const { return locker<TSharedLock<TMutex>>(&m_object, (TMutex&)m_object_guard); }
+        decltype(auto) operator -> () const { return proxy<TSharedLock<TMutex>>(&m_object, (TMutex&)m_object_guard); }
+        decltype(auto) operator * () const { return proxy<TSharedLock<TMutex>>(&m_object, (TMutex&)m_object_guard); }
     private:
 
         template<typename T>
@@ -82,16 +82,16 @@ namespace jt {
         }
 
     template<typename TLock>
-    class locker final {
+    class proxy final {
         TObject * const m_object;
     public:
-        locker(locker&& rhs) noexcept
+        proxy(proxy&& rhs) noexcept
             : m_object(rhs.m_object)
               , m_lock(std::move(rhs.m_lock)) { 
                 rhs.m_object = nullptr;
         }
 
-        locker(const TObject * const object, TMutex& mutex) 
+        proxy(const TObject * const object, TMutex& mutex) 
             : m_object((TObject*)object)
             , m_lock(mutex){}
         

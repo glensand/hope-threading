@@ -44,8 +44,8 @@ namespace jt {
         using shared_lock_t = TSharedLock<TMutex>;
         using exclusive_lock_t = TExclusiveLock<TMutex>;
 
-        using collizion_list_t = std::list<TValue>;
-        using bucket_t = std::vector<collizion_list_t>;
+        using collision_list_t = std::list<TValue>;
+        using bucket_t = std::vector<collision_list_t>;
 
         struct lockable_bucket final {
             bucket_t bucket;
@@ -70,18 +70,18 @@ namespace jt {
             {
                 const exclusive_lock_t lock(bucket.guard);
                 const std::size_t sub_bucket_id = hash % bucket.bucket.size();
-                auto&& collizion_list = bucket.bucket[sub_bucket_id];
-                auto&& found = std::find_if(begin(collizion_list), end(collizion_list), 
+                auto&& collision_list = bucket.bucket[sub_bucket_id];
+                auto&& found = std::find_if(begin(collision_list), end(collision_list), 
                 [this, &key] (const TValue& candidate){
                     return m_equal(m_key_extractor(candidate), key);
                 });
 
-                if (found != end(collizion_list)){
+                if (found != end(collision_list)){
                     new_element = false;
                     m_value_assigner(*found, std::forward<Ts>(value)...); // renew the value
                 } else {
-                    collizion_list.emplace_front(std::forward<Ts>(value)...);
-                    m_size.fetch_add(1, std::memory_order_release);
+                    collision_list.emplace_front(std::forward<Ts>(value)...);
+                    ++m_size;
                 }
                 bucket.changed_while_resize = true;
             }
@@ -96,9 +96,8 @@ namespace jt {
             auto&& bucket = m_storage[hash % BucketsCount];
             const shared_lock_t lock(bucket.guard);
             auto* obtained = find_locked(hash, value, bucket.bucket);
-            if (obtained) {
+            if (obtained)
                 value = *obtained;
-            }
             return obtained != nullptr;
         }
 
@@ -115,14 +114,14 @@ namespace jt {
             const std::size_t hash = m_hasher(value);
             auto&& bucket = m_storage[hash % BucketsCount];
             const exclusive_lock_t lock(bucket.guard);
-            auto&& collizion_list = bucket.bucket[hash % bucket.bucket.size()];
-            const auto prev_size = collizion_list.size();
-            collizion_list.remove_if([this, &value] (const TValue& v){
+            auto&& collision_list = bucket.bucket[hash % bucket.bucket.size()];
+            const auto prev_size = collision_list.size();
+            collision_list.remove_if([this, &value] (const TValue& v){
                 return m_equal(v, value);
             });
-            const bool removed = prev_size != collizion_list.size();
-            if (removed)
-                m_size.fetch_add(-1, std::memory_order_release);
+            bucket.changed_while_resize = true;
+            if (prev_size != collision_list.size())
+                --m_size;
         }
 
         template<typename TKey>
@@ -148,12 +147,12 @@ namespace jt {
 
     private:
         const TValue* find_locked(std::size_t hash, const TValue& value, const bucket_t& bucket) const {
-            auto&& collizion_list = bucket[hash % bucket.size()];
-            auto&& found = std::find_if(begin(collizion_list), end(collizion_list), 
+            auto&& collision_list = bucket[hash % bucket.size()];
+            auto&& found = std::find_if(begin(collision_list), end(collision_list), 
             [this, &value] (const TValue& candidate){
                 return m_equal(candidate, value);
             });
-            return found != end(collizion_list) ? &(*found) : nullptr;
+            return found != end(collision_list) ? &(*found) : nullptr;
         }
 
         void resize(){
@@ -168,8 +167,8 @@ namespace jt {
             
             const std::size_t bucket_capacity = m_capacity * ResizeFactor / BucketsCount;
             for (auto&& bucket : m_storage) {
-                while(true)
-                { 
+                bool copied = false;
+                while(!copied) {
                     // TODO:: probably better to add something like flat-combining
                     // and do not try to resize the bucket inside the loop, but instead share the value 
                     // via the active resizing context or something like that
@@ -180,10 +179,10 @@ namespace jt {
                     {
                         const shared_lock_t lock(bucket.guard);
                         bucket.changed_while_resize = false;
-                        for (auto&& collizion_list : bucket.bucket) {
-                            for (auto&& value : collizion_list) {
-                                auto&& new_collizion_list = new_bucket[m_hasher(value) % bucket_capacity];
-                                new_collizion_list.push_front(value);
+                        for (auto&& collision_list : bucket.bucket) {
+                            for (auto&& value : collision_list) {
+                                auto&& new_collision_list = new_bucket[m_hasher(value) % bucket_capacity];
+                                new_collision_list.push_front(value);
                             }
                         }
                     }
@@ -191,10 +190,11 @@ namespace jt {
                     // try to swap buckets
                     {
                         const exclusive_lock_t lock(bucket.guard);
-                        if (bucket.changed_while_resize)
-                            continue; // shit happend, we should try one more time
-
-                        bucket.bucket = std::move(new_bucket);
+                        if (!bucket.changed_while_resize) {
+                            bucket.bucket = std::move(new_bucket);
+                            copied = true;
+                        }
+                        // otherwise shit happened, we should try one more time
                     }
                 }
             }
