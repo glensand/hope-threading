@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "jerk-thread/containers/hashmap/hash_set.h"
+#include "jerk-thread/containers/hashmap/hash_map.h"
 #include "jerk-thread/synchronization/spinlock.h"
 
 #include <mutex>
@@ -74,20 +75,43 @@ void add_remove(std::size_t threads_count) {
     );
 }
 
-TEST(HashStorageText, AddFindStatisticTest)
+TEST(HashStorageTest, AddFindStatisticTest)
 {
     add_find(1);
     add_find(3);
     add_find(10);
     add_find(30);
-    add_find(5);
+    add_find(300);
 }
 
-TEST(HashStorageText, AddRemove)
+TEST(HashStorageTest, AddRemove)
 {
     add_remove(1);
     add_remove(3);
     add_remove(10);
     add_remove(30);
-    add_remove(5);
+    add_remove(300);
+}
+
+struct dumb
+{
+    std::string a, b, c;
+
+    dumb(std::string _a = "", std::string _b = "", std::string _c = "")
+        : a(_a), b(_b), c(_c){}
+};
+
+template<typename TKey, typename TValue>
+using map_t = jt::hash_map<TKey, TValue>;
+
+TEST(HashMapTest, AddFindStatisticTest)
+{
+    map_t<std::string, dumb> m;
+    m.emplace("lol", "a", " ", "-");
+    dumb d;
+    m.obtain("lol", d);
+    ASSERT_TRUE(d.a == "a");
+    auto&& res = m.get("lol");
+    
+    ASSERT_TRUE(res.value().a == "a");
 }

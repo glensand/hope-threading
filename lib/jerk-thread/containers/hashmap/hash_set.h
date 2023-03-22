@@ -10,30 +10,30 @@
 
 #include "jerk-thread/containers/hashmap/hash_storage.h"
 
+#include <mutex>
+#include <shared_mutex>
+
 namespace jt {
 
-    template<typename TValue>
-    struct value_assigner final {
-        // do nothing
-        template<typename T>
-        void operator()(TValue& lhs, T&& rhs) const { }
-    };
+    template<typename TKey>
+    struct set_traits final {
+        template<typename... Ts>
+        static void assign_value(Ts&&...) noexcept { } // do nothing
 
-    template<typename TValue>
-    struct key_extractor final {
-        // do nothing
-        const TValue& operator()(const TValue& v) const noexcept { return v; }
+        static decltype(auto) extract_key(const TKey& k) noexcept {
+            return k;
+        }
     };
 
     template<typename TValue,
         typename THasher = std::hash<TValue>,
-        typename TEqual = trivial_equal_operator<TValue>,
+        typename TEqual = trivial_equal_operator,
         typename TMutex = rw_spinlock,
         template <typename> typename TExclusiveLock = std::unique_lock,
         template <typename> typename TSharedLock = std::shared_lock,
         std::size_t BucketsCount = 8,
         std::size_t ResizeFactor = 2
     >
-    using hash_set = hash_storage<TValue, value_assigner<TValue>, key_extractor<TValue>, THasher, 
+    using hash_set = hash_storage<TValue, set_traits<TValue>, THasher,
         TEqual, TMutex, TExclusiveLock, TSharedLock, BucketsCount, ResizeFactor>;
 }

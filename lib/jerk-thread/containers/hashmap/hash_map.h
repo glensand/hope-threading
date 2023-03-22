@@ -10,11 +10,67 @@
 
 #include "jerk-thread/containers/hashmap/hash_storage.h"
 
+#include <optional>
+#include <mutex>
+#include <shared_mutex>
+
 namespace jt {
 
+    template<typename TKey, typename TValue>
+    struct key_value final {
+        TKey key;
+        TValue value;
+
+        template<typename... Ts,
+            typename = std::enable_if_t< (0 < sizeof...(Ts)) >>
+        key_value(TKey&& k, Ts&&... args)
+            : key(std::move(k))
+            , value(std::forward<Ts>(args)...){ }
+
+        template<typename... Ts,
+            typename = std::enable_if_t< (0 < sizeof...(Ts)) >>
+        key_value(const TKey& k, Ts&&...)
+            : key(k)
+            , value(std::forward<Ts>(args)...) { }
+
+        key_value(key_value&& kv)
+            : key(std::move(kv.key))
+            , value(std::move(kv.value)){}
+
+        key_value(const key_value& kv)
+            : key(kv.key)
+            , value(kv.value) {}
+
+        key_value(const TKey& k)
+            : key(k) {}
+    };
+
+    template<typename TKey, typename TValue>
+    struct map_traits final {
+
+        template<typename T1, typename... Ts>
+        static void assign_value(key_value<TKey, TValue>& kv, const T1&, Ts&&... args) {
+            kv.value = TValue(std::forward<Ts>(args)...);
+        }
+
+        static void assign_value(key_value<TKey, TValue>& lhs, const key_value<TKey, TValue>& rhs) {
+            lhs.value = rhs.value;
+        }
+
+        template<typename TKey, typename TValue>
+        static decltype(auto) extract_key(const key_value<TKey, TValue>& kv) noexcept {
+            return kv.key;
+        }
+
+        template<typename TKey, typename... Ts>
+        static decltype(auto) extract_key(const TKey& k, Ts&&...) noexcept {
+            return k;
+        }
+    };
+
     template<typename TKey, typename TValue, 
-        typename THasher = std::hash<TKey>,
-        typename TEqual = trivial_equal_operator<TKey>,
+        template <typename> typename THasher = std::hash,
+        typename TEqual = trivial_equal_operator,
         typename TMutex = rw_spinlock,
         template <typename> typename TExclusiveLock = std::unique_lock,
         template <typename> typename TSharedLock = std::shared_lock,
@@ -22,27 +78,26 @@ namespace jt {
         std::size_t ResizeFactor = 2
     >
     class hash_map final {
-        using key_value_t = std::pair<TKey, TValue>;
     public:
         template<typename... Ts>
-        bool emplace(const TKey& k, Ts&&...vs) {
-            return m_storage.add(key_value_t(k, TValue(std::forward<Ts>(vs)...)));
+        bool emplace(Ts&&...vs) {
+            return m_storage.emplace(std::forward<Ts>(vs)...);
         }
 
         bool obtain(const TKey& k, TValue& v) const noexcept {
-            key_value_t kv(k, {});
+            key_value<TKey, TValue> kv{ k };
             const bool obtained = m_storage.obtain(kv);
             if (obtained)
-                v = kv.value;
+                v = std::move(kv.value);
             return obtained;
         }
 
         std::optional<TValue> get(const TKey& k) const noexcept {
-            key_value_t kv(k, {});
+            key_value<TKey, TValue> kv{ k };
             const bool obtained = m_storage.obtain(kv);
             std::optional<TValue> ov;
             if (obtained)
-                ov = kv.value;
+                ov = std::move(kv.value);
             return ov;
         }
 
@@ -50,9 +105,8 @@ namespace jt {
             m_storage.remove(k);
         }
     private:
-        hash_storage<key_value_t, THasher, TEqual, 
-            TMutex, TExclusiveLock, TSharedLock, 
-            BucketsCount, ResizeFactor> m_storage;
+        hash_storage<key_value<TKey, TValue>, map_traits<TKey, TValue>, THasher<TKey>,
+            TEqual, TMutex, TExclusiveLock, TSharedLock, BucketsCount, ResizeFactor> m_storage;
     };
 
 }

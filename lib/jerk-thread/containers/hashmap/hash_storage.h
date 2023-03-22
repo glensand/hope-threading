@@ -12,29 +12,25 @@
 #include <vector>
 #include <list>
 #include <atomic>
-#include <mutex>
-#include <shared_mutex>
-
-#include "jerk-thread/synchronization/spinlock.h"
 
 namespace jt {
 
-    template<typename TValue>
     struct trivial_equal_operator final {
-        bool operator()(const TValue& a, const TValue& b) const noexcept { 
+        template<typename TLhs, typename RLhs>
+        bool operator()(const TLhs& a, const RLhs& b) const noexcept {
             return a == b;
         }
     };
 
     // TODO:: add allocator
-    template<typename TValue,
-        typename TValueAssigner,
-        typename TKeyExtractor,
-        typename THasher = std::hash<TValue>,
-        typename TEqual = trivial_equal_operator<TValue>,
-        typename TMutex = rw_spinlock,
-        template <typename> typename TExclusiveLock = std::unique_lock,
-        template <typename> typename TSharedLock = std::shared_lock,
+    template<
+        typename TValue,
+        typename TKeyTraits,
+        typename THasher,
+        typename TEqual,
+        typename TMutex,
+        template <typename> typename TExclusiveLock,
+        template <typename> typename TSharedLock,
         std::size_t BucketsCount = 8,
         std::size_t ResizeFactor = 2
     >
@@ -62,7 +58,7 @@ namespace jt {
 
         template<typename... Ts>
         bool emplace(Ts&&... value) {
-            auto&& key = m_key_extractor(value...);
+            auto&& key = TKeyTraits::extract_key(value...);
             const std::size_t hash = m_hasher(key);
             auto&& bucket = m_storage[hash % BucketsCount];
             // todo:: flat-combining?
@@ -73,12 +69,12 @@ namespace jt {
                 auto&& collision_list = bucket.bucket[sub_bucket_id];
                 auto&& found = std::find_if(begin(collision_list), end(collision_list), 
                 [this, &key] (const TValue& candidate){
-                    return m_equal(m_key_extractor(candidate), key);
+                    return m_equal(TKeyTraits::extract_key(candidate), key);
                 });
 
                 if (found != end(collision_list)){
                     new_element = false;
-                    m_value_assigner(*found, std::forward<Ts>(value)...); // renew the value
+                    TKeyTraits::assign_value(*found, std::forward<Ts>(value)...); // renew the value
                 } else {
                     collision_list.emplace_front(std::forward<Ts>(value)...);
                     ++m_size;
@@ -92,21 +88,22 @@ namespace jt {
         }
 
         bool obtain(TValue& value) const noexcept {
-            const std::size_t hash = m_hasher(value);
+            const auto key = TKeyTraits::extract_key(value);
+            const std::size_t hash = m_hasher(key);
             auto&& bucket = m_storage[hash % BucketsCount];
             const shared_lock_t lock(bucket.guard);
-            auto* obtained = find_locked(hash, value, bucket.bucket);
+            auto* obtained = find_locked(hash, key, bucket.bucket);
             if (obtained)
-                value = *obtained;
+                TKeyTraits::assign_value(value, *obtained); // renew the value
             return obtained != nullptr;
         }
 
         template<typename TKey>
-        const TValue* find(const TKey& value) const noexcept {
-            const std::size_t hash = m_hasher(value);
+        const TValue* find(const TKey& key) const noexcept {
+            const std::size_t hash = m_hasher(key);
             auto&& bucket = m_storage[hash % BucketsCount];
             const shared_lock_t lock(bucket.guard);
-            return find_locked(hash, value, bucket.bucket);
+            return find_locked(hash, key, bucket.bucket);
         }
 
         template<typename TKey>
@@ -146,11 +143,12 @@ namespace jt {
         std::size_t capacity() const noexcept { return m_capacity.load(std::memory_order_acquire); }
 
     private:
-        const TValue* find_locked(std::size_t hash, const TValue& value, const bucket_t& bucket) const {
+        template<typename TKey>
+        const TValue* find_locked(std::size_t hash, const TKey& key, const bucket_t& bucket) const {
             auto&& collision_list = bucket[hash % bucket.size()];
             auto&& found = std::find_if(begin(collision_list), end(collision_list), 
-            [this, &value] (const TValue& candidate){
-                return m_equal(candidate, value);
+            [this, &key] (const TValue& candidate){
+                return m_equal(TKeyTraits::extract_key(candidate), key);
             });
             return found != end(collision_list) ? &(*found) : nullptr;
         }
@@ -181,7 +179,8 @@ namespace jt {
                         bucket.changed_while_resize = false;
                         for (auto&& collision_list : bucket.bucket) {
                             for (auto&& value : collision_list) {
-                                auto&& new_collision_list = new_bucket[m_hasher(value) % bucket_capacity];
+                                const auto& key = TKeyTraits::extract_key(value);
+                                auto&& new_collision_list = new_bucket[m_hasher(key) % bucket_capacity];
                                 new_collision_list.push_front(value);
                             }
                         }
@@ -207,8 +206,6 @@ namespace jt {
         std::atomic<std::size_t> m_size = 0u;
         std::atomic<std::size_t> m_capacity = BucketsCount;
 
-        TKeyExtractor m_key_extractor;
-        TValueAssigner m_value_assigner;
         THasher m_hasher;
         TEqual m_equal;
         storage_t m_storage;
