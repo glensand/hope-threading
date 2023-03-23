@@ -9,6 +9,7 @@
 #pragma once
 
 #include "jerk-thread/containers/hashmap/hash_storage.h"
+#include "jerk-thread/synchronization/spinlock.h"
 
 #include <mutex>
 #include <shared_mutex>
