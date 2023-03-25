@@ -46,7 +46,10 @@ namespace jt {
         struct lockable_bucket final {
             bucket_t bucket;
             mutable TMutex guard;
-            bool changed_while_resize = true;
+            std::size_t size{ 1 };
+            std::size_t capacity{ 1 };
+            std::atomic<bool> resizing{ false };
+            bool changed_while_resize{ true };
         };
 
         using storage_t = std::array<lockable_bucket, BucketsCount>;
@@ -62,6 +65,7 @@ namespace jt {
             const std::size_t hash = m_hasher(key);
             auto&& bucket = m_storage[hash % BucketsCount];
             // todo:: flat-combining?
+            bool should_resize = false;
             bool new_element = true;
             {
                 const exclusive_lock_t lock(bucket.guard);
@@ -77,12 +81,16 @@ namespace jt {
                     TKeyTraits::assign_value(*found, std::forward<Ts>(value)...); // renew the value
                 } else {
                     collision_list.emplace_front(std::forward<Ts>(value)...);
+                    ++bucket.size;
                     ++m_size;
+
+                    should_resize = bucket.size * ResizeFactor > bucket.capacity;
                 }
                 bucket.changed_while_resize = true;
             }
 
-            resize();
+            if (should_resize)
+                resize(bucket);
 
             return new_element;
         }
@@ -153,58 +161,50 @@ namespace jt {
             return found != end(collision_list) ? &(*found) : nullptr;
         }
 
-        void resize(){
-            if (m_resizing.load(std::memory_order_acquire) || 
-                m_size.load(std::memory_order_acquire) * ResizeFactor < m_capacity.load(std::memory_order_acquire))
-                    return;
-
+        void resize(lockable_bucket& bucket) const {
             bool resizing = false;
-            if (!m_resizing.compare_exchange_strong(resizing, true, 
-                    std::memory_order_acquire, std::memory_order_relaxed))
+            if (!bucket.resizing.compare_exchange_strong(resizing, true,
+                std::memory_order_acquire, std::memory_order_relaxed))
                 return;
-            
-            const std::size_t bucket_capacity = m_capacity * ResizeFactor / BucketsCount;
-            for (auto&& bucket : m_storage) {
-                bool copied = false;
-                while(!copied) {
-                    // TODO:: probably better to add something like flat-combining
-                    // and do not try to resize the bucket inside the loop, but instead share the value 
-                    // via the active resizing context or something like that
-                    bucket_t new_bucket;
-                    new_bucket.resize(bucket_capacity);
 
-                    // prepare bucket for swap
-                    {
-                        const shared_lock_t lock(bucket.guard);
-                        bucket.changed_while_resize = false;
-                        for (auto&& collision_list : bucket.bucket) {
-                            for (auto&& value : collision_list) {
-                                const auto& key = TKeyTraits::extract_key(value);
-                                auto&& new_collision_list = new_bucket[m_hasher(key) % bucket_capacity];
-                                new_collision_list.push_front(value);
-                            }
+            const std::size_t bucket_capacity = bucket.capacity * ResizeFactor;
+            bool copied = false;
+            while(!copied) {
+                // TODO:: probably better to add something like flat-combining
+                // and do not try to resize the bucket inside the loop, but instead share the value 
+                // via the active resizing context or something like that
+                bucket_t new_bucket;
+                new_bucket.resize(bucket_capacity);
+
+                // prepare bucket for swap
+                {
+                    const shared_lock_t lock(bucket.guard);
+                    bucket.changed_while_resize = false;
+                    for (auto&& collision_list : bucket.bucket) {
+                        for (auto&& value : collision_list) {
+                            const auto& key = TKeyTraits::extract_key(value);
+                            auto&& new_collision_list = new_bucket[m_hasher(key) % bucket_capacity];
+                            new_collision_list.push_front(value);
                         }
                     }
+                }
 
-                    // try to swap buckets
-                    {
-                        const exclusive_lock_t lock(bucket.guard);
-                        if (!bucket.changed_while_resize) {
-                            bucket.bucket = std::move(new_bucket);
-                            copied = true;
-                        }
-                        // otherwise shit happened, we should try one more time
+                // try to swap buckets
+                {
+                    const exclusive_lock_t lock(bucket.guard);
+                    if (!bucket.changed_while_resize) {
+                        bucket.bucket = std::move(new_bucket);
+                        copied = true;
                     }
+                    // otherwise shit happened, we should try one more time
                 }
             }
 
-            m_capacity = BucketsCount * bucket_capacity;
-            m_resizing.store(false, std::memory_order_release);
+            bucket.capacity = bucket_capacity;
+            bucket.resizing.store(false, std::memory_order_release);
         }
 
-        std::atomic_bool m_resizing;
         std::atomic<std::size_t> m_size = 0u;
-        std::atomic<std::size_t> m_capacity = BucketsCount;
 
         THasher m_hasher;
         TEqual m_equal;

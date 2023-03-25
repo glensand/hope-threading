@@ -17,6 +17,7 @@
 #include <functional>
 
 #include "jerk-thread/containers/hashmap/hash_set.h"
+#include "jerk-thread/containers/hashmap/stl_chunked_set.h"
 #include "jerk-thread/synchronization/spinlock.h"
 
 template<typename TContainer, bool bLock = false>
@@ -33,7 +34,7 @@ auto run_test(std::size_t writers_count, std::size_t readers_count, std::size_t 
         const auto volatile res = set.find(to);
     };
 
-    for (std::size_t i{ 0 }; i < iterations; ++i) {
+    for (std::size_t i{ 0 }; i < 100; ++i) {
         const auto to_emp = std::to_string(i);
         set.emplace(to_emp);
     }
@@ -57,9 +58,6 @@ auto run_test(std::size_t writers_count, std::size_t readers_count, std::size_t 
                     auto&& elapsed = std::chrono::high_resolution_clock::now() - start;
                     const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
                     measure[t] += duration;
-
-                    //if (measure.size() == 1)
-                        //std::this_thread::yield();
                 }
             });
         }
@@ -80,12 +78,15 @@ auto run_test(std::size_t writers_count, std::size_t readers_count, std::size_t 
 }
 
 int main() {
-    auto&& [r1, w1] = run_test<jt::hash_set<std::string>>(10, 80, 1000);
-    auto&& [r2, w2] = run_test<std::unordered_set<std::string>, true>(10, 80, 1000);
+    auto&& [r1, w1] = run_test<jt::hash_set<std::string>>(0, 8, 10000000);
+    auto&& [r2, w2] = run_test<std::unordered_set<std::string>, false>(0, 8, 10000000);
+    auto&& [r3, w3] = run_test<jt::stl_chunked_set<std::string>, false>(0, 8, 10000000);
 
-    std::cout << "Read std: " << std::accumulate(std::begin(r2), std::end(r2), (long long)0, std::plus<long long>{})
-        << " Read jt: " << std::accumulate(std::begin(r1), std::end(r1), (long long)0, std::plus<long long>{}) << std::endl;
+    auto results = [](auto&& container) {
+        std::cout << std::accumulate(std::begin(container), std::end(container), (long long)0, std::plus<long long>{});
+        return " ";
+    };
 
-    std::cout << "Write std: " << std::accumulate(std::begin(w2), std::end(w2), (long long)0, std::plus<long long>{})
-        << " Write jt: " << std::accumulate(std::begin(w1), std::end(w1), (long long)0, std::plus<long long>{}) << std::endl;
+    std::cout << "Read std: " << results(r2) << "Read jt: " << results(r1) << "Read stl+jt: " << results(r3) << std::endl;
+    std::cout << "Write std: " << results(w1) << "Write jt: " << results(w2) << "Write stl+jt: " << results(w3) << std::endl;
 } 
