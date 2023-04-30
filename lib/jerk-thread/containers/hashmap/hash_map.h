@@ -29,11 +29,11 @@ namespace jt {
 
         template<typename... Ts,
             typename = std::enable_if_t< (0 < sizeof...(Ts)) >>
-        key_value(const TKey& k, Ts&&...)
+        key_value(const TKey& k, Ts&&... args)
             : key(k)
             , value(std::forward<Ts>(args)...) { }
 
-        key_value(key_value&& kv)
+        key_value(key_value&& kv) noexcept
             : key(std::move(kv.key))
             , value(std::move(kv.value)){}
 
