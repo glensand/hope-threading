@@ -10,7 +10,7 @@
 
 #include "jerk-thread/synchronization/spinlock.h"
 
-#include <set>
+#include <unordered_set>
 #include <mutex>
 #include <shared_mutex>
 #include <array>
