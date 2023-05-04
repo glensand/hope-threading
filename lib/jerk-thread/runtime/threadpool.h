@@ -42,7 +42,7 @@ namespace jt {
             }
 
             void shutdown() {
-                if (m_time_to_die.load(std::memory_order_acquire)){
+                if (!m_time_to_die.load(std::memory_order_acquire)) {
                     m_time_to_die.store(true, std::memory_order_release);
                     wait_event.set();
                     m_thread_impl.join();
@@ -133,6 +133,7 @@ namespace jt {
                 queued_work = new work_wrapper;
             }
 
+            queued_work->work_impl = std::move(w);
             m_queue_guard.lock();
             if (m_free_threads.empty()) {
                 // No thread available, queue the work to be done
@@ -153,8 +154,8 @@ namespace jt {
             // Check to see if there is any work to be done
             const std::lock_guard lock(m_queue_guard);
             if (!m_queued_work.empty()){
-                queued_work = m_queued_work.back();
-                m_queued_work.pop_back();
+                queued_work = m_queued_work.front();
+                m_queued_work.pop_front();
             }
             if (queued_work == nullptr) {
                 // There was no work to be done, so add the thread to the pool

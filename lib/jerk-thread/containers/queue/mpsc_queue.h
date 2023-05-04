@@ -11,6 +11,7 @@
 #include <atomic>
 
 #include "jerk-thread/synchronization/backoff.h"
+#include "jerk-thread/foundation.h"
 
 namespace jt {
 
@@ -22,11 +23,8 @@ namespace jt {
     template<typename TItem, alloc_policy policy = alloc_policy::new_only>
     class mpsc_queue final {
     public:
-        mpsc_queue(mpsc_queue const&) = delete;
-        mpsc_queue& operator = (mpsc_queue const&) = delete;
-
-        mpsc_queue(mpsc_queue&& queue) = default;
-        mpsc_queue& operator=(mpsc_queue&& queue) = default;
+        DECLARE_EXPLICIT_DEFAULT_MOVABLE(mpsc_queue);
+        DECLARE_NON_COPYABLE(mpsc_queue);
 
         explicit mpsc_queue() {
             m_head = m_tail = m_buffer_head = new node();
@@ -75,7 +73,7 @@ namespace jt {
         // internal node structure 
         struct node final {
             template<typename T = TItem>
-            node(T&& in_value = T{})
+            explicit node(T&& in_value = T{})
                 : value(std::forward<T>(in_value)) { }
 
             node* volatile next = nullptr;
