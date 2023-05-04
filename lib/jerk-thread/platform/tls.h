@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+#if defined(_WIN32) || defined(_WIN64)
 #include "Windows.h"
 #else
 #include "pthread.h"
@@ -9,7 +9,7 @@
 namespace jt::tls {
 
     inline auto get_thread_id() {
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+#if defined(_WIN32) || defined(_WIN64)
         return (unsigned long)GetCurrentThreadId();
 #else
         unsigned long long tid;

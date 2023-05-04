@@ -13,6 +13,7 @@ file(GLOB CL_HEADERS
     jerk-thread/containers/queue/*.h
     jerk-thread/containers/hashmap/*.h
     jerk-thread/synchronization/*.h
+    jerk-thread/runtime/*.h
 )
 
 add_library(jerkthread INTERFACE ${CL_HEADERS})

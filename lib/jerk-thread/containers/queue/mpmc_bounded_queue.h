@@ -9,17 +9,15 @@
 #pragma once
 
 #include <atomic>
+#include "jerk-thread/foundation.h"
 
 namespace jt {
 
     template<typename TItem>
     class mpmc_bounded_queue final {
     public:
-        mpmc_bounded_queue(mpmc_bounded_queue const&) = delete;
-        mpmc_bounded_queue& operator = (mpmc_bounded_queue const&) = delete;
-
-        mpmc_bounded_queue(mpmc_bounded_queue&& queue) = default;
-        mpmc_bounded_queue& operator=(mpmc_bounded_queue&& queue) = default;
+        DECLARE_NON_COPYABLE(mpmc_bounded_queue);
+        DECLARE_EXPLICIT_DEFAULT_MOVABLE(mpmc_bounded_queue);
 
         explicit mpmc_bounded_queue(std::size_t size)
             : m_buffer_mask(size - 1){
@@ -102,11 +100,11 @@ namespace jt {
         const std::size_t m_buffer_mask;
 
         padding_t m_padding1 { };
-        std::atomic<std::size_t> m_enqueue_pos;
+        std::atomic<std::size_t> m_enqueue_pos{};
 
         padding_t m_padding2 { };
-        std::atomic<size_t> m_dequeue_pos;
-        padding_t m_padding3;
+        std::atomic<size_t> m_dequeue_pos{};
+        padding_t m_padding3{};
     };
 
 }

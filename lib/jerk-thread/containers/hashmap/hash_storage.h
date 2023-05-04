@@ -148,7 +148,6 @@ namespace jt {
         }
 
         std::size_t size() const noexcept { return m_size.load(std::memory_order_acquire); }
-        std::size_t capacity() const noexcept { return m_capacity.load(std::memory_order_acquire); }
 
     private:
         template<typename TKey>

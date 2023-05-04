@@ -57,12 +57,11 @@ namespace jt {
             lhs.value = rhs.value;
         }
 
-        template<typename TKey, typename TValue>
         static decltype(auto) extract_key(const key_value<TKey, TValue>& kv) noexcept {
             return kv.key;
         }
 
-        template<typename TKey, typename... Ts>
+        template<typename... Ts>
         static decltype(auto) extract_key(const TKey& k, Ts&&...) noexcept {
             return k;
         }
