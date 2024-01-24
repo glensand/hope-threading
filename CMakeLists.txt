@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
 
-project(jerk-thread-main)
+project(hope-thread-main)
 
 enable_testing()
 
