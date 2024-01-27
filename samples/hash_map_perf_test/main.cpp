@@ -1,9 +1,9 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023-2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope_threading
  */
 
 #include <unordered_set>
@@ -16,14 +16,14 @@
 #include <numeric>
 #include <functional>
 
-#include "jerk-thread/containers/hashmap/hash_set.h"
-#include "jerk-thread/containers/hashmap/stl_chunked_set.h"
-#include "jerk-thread/synchronization/spinlock.h"
+#include "hope_thread/containers/hashmap/hash_set.h"
+#include "hope_thread/containers/hashmap/stl_chunked_set.h"
+#include "hope_thread/synchronization/spinlock.h"
 
 template<typename TContainer, bool bLock = false>
 auto run_test(std::size_t writers_count, std::size_t readers_count, std::size_t iterations) {
     std::vector<std::thread> ts;
-    jt::rw_spinlock guard;
+    hope::threading::rw_spinlock guard;
     TContainer set;
 
     auto&& emplace = [&](auto&& to){
@@ -68,8 +68,8 @@ auto run_test(std::size_t writers_count, std::size_t readers_count, std::size_t 
     std::vector<long long> readers_measure;
     readers_measure.resize(readers_count);
 
-    perform(emplace, writers_measure, std::unique_lock<jt::rw_spinlock>{});
-    perform(find, readers_measure, std::shared_lock<jt::rw_spinlock>{});
+    perform(emplace, writers_measure, std::unique_lock<hope::threading::rw_spinlock>{});
+    perform(find, readers_measure, std::shared_lock<hope::threading::rw_spinlock>{});
 
     for (auto&& t : ts)
         t.join();
@@ -78,9 +78,9 @@ auto run_test(std::size_t writers_count, std::size_t readers_count, std::size_t 
 }
 
 int main() {
-    auto&& [r1, w1] = run_test<jt::hash_set<std::string>>(0, 8, 10000000);
+    auto&& [r1, w1] = run_test<hope::threading::hash_set<std::string>>(0, 8, 10000000);
     auto&& [r2, w2] = run_test<std::unordered_set<std::string>, false>(0, 8, 10000000);
-    auto&& [r3, w3] = run_test<jt::stl_chunked_set<std::string>, false>(0, 8, 10000000);
+    auto&& [r3, w3] = run_test<hope::threading::stl_chunked_set<std::string>, false>(0, 8, 10000000);
 
     auto results = [](auto&& container) {
         std::cout << std::accumulate(std::begin(container), std::end(container), (long long)0, std::plus<long long>{});

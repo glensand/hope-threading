@@ -1,9 +1,9 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
 #pragma once
@@ -11,10 +11,10 @@
 #include <atomic>
 #include <cassert>
 
-#include "jerk-thread/platform/tls.h"
-#include "jerk-thread/synchronization/backoff.h"
+#include "hope_thread/platform/tls.h"
+#include "hope_thread/synchronization/backoff.h"
 
-namespace jt {
+namespace hope::threading {
 
 	class spinlock final {
 	public:
@@ -116,7 +116,7 @@ namespace jt {
 		recursive_spinlock() = default;
 
 		void lock() {
-			const uint32_t current_thread = tls::get_thread_id();
+			const uint32_t current_thread = get_thread_id();
 
 			if (m_owner_id.load(std::memory_order_acquire) == current_thread) {
 				++m_recursion;
@@ -140,7 +140,7 @@ namespace jt {
 		}
 
 		bool try_lock() {
-			const uint32_t current_thread = tls::get_thread_id();
+			const uint32_t current_thread = get_thread_id();
 			const uint32_t current_owner = m_owner_id.load(std::memory_order_acquire);
 
 			if (current_owner == current_thread) {
@@ -165,7 +165,7 @@ namespace jt {
 			--m_recursion;
 			if (m_recursion == 0)
 			{
-				assert(m_owner_id == tls::get_thread_id());
+				assert(m_owner_id == get_thread_id());
 				m_owner_id.store(Free);
 			}
 		}
@@ -222,7 +222,7 @@ namespace jt {
 				// Optimistically assume the lock is free on the first try
 				if ((m_lock += 0x100000) == 0x100000) {
 
-					const uint64_t this_id = ((uint64_t)tls::get_thread_id()) << 32;
+					const uint64_t this_id = ((uint64_t)get_thread_id()) << 32;
 					assert(0 == (this_id & (ExclusiveMask | SharedMask)));
 					m_lock += this_id;
 
@@ -243,7 +243,7 @@ namespace jt {
 		void unlock() noexcept {
 			--m_write_recursion_depth;
 			if (m_write_recursion_depth == 0) {
-				const auto this_id = (uint64_t)tls::get_thread_id() << 32;
+				const auto this_id = (uint64_t)get_thread_id() << 32;
 				assert(0 == (this_id & (ExclusiveMask | SharedMask)));
 				m_lock -= (this_id);
 				m_lock -= (0x100000);
@@ -254,7 +254,7 @@ namespace jt {
 		bool check_for_recursion() const noexcept {
 			const uint64_t current_lock_thread = ThreadIdMask & m_lock.load(std::memory_order_acquire);
 			const auto owner_thread_id = (uint32_t)(current_lock_thread >> 32);
-			const uint32_t this_id = tls::get_thread_id();
+			const uint32_t this_id = get_thread_id();
 			assert(owner_thread_id != this_id || m_write_recursion_depth > 0);
 			return this_id == owner_thread_id;
 		}

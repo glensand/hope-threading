@@ -1,20 +1,20 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
 #pragma once
 
-#include "jerk-thread/containers/hashmap/hash_storage.h"
-#include "jerk-thread/synchronization/spinlock.h"
+#include "hope_thread/containers/hashmap/hash_storage.h"
+#include "hope_thread/synchronization/spinlock.h"
 
 #include <mutex>
 #include <shared_mutex>
 
-namespace jt {
+namespace hope::threading {
 
     template<typename TKey>
     struct set_traits final {

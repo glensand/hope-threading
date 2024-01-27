@@ -1,4 +1,4 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
@@ -8,13 +8,13 @@
 
 #pragma once
 
-#include "jerk-thread/containers/hashmap/hash_storage.h"
+#include "hope_thread/containers/hashmap/hash_storage.h"
 
 #include <optional>
 #include <mutex>
 #include <shared_mutex>
 
-namespace jt {
+namespace hope::threading {
 
     template<typename TKey, typename TValue>
     struct key_value final {
@@ -23,13 +23,13 @@ namespace jt {
 
         template<typename... Ts,
             typename = std::enable_if_t< (0 < sizeof...(Ts)) >>
-        key_value(TKey&& k, Ts&&... args)
+        explicit key_value(TKey&& k, Ts&&... args)
             : key(std::move(k))
             , value(std::forward<Ts>(args)...){ }
 
         template<typename... Ts,
             typename = std::enable_if_t< (0 < sizeof...(Ts)) >>
-        key_value(const TKey& k, Ts&&... args)
+        explicit key_value(const TKey& k, Ts&&... args)
             : key(k)
             , value(std::forward<Ts>(args)...) { }
 
@@ -41,7 +41,7 @@ namespace jt {
             : key(kv.key)
             , value(kv.value) {}
 
-        key_value(const TKey& k)
+        explicit key_value(const TKey& k)
             : key(k) {}
     };
 

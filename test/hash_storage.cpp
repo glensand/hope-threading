@@ -1,21 +1,21 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
 #include "gtest/gtest.h"
-#include "jerk-thread/containers/hashmap/hash_set.h"
-#include "jerk-thread/containers/hashmap/hash_map.h"
-#include "jerk-thread/synchronization/spinlock.h"
+#include "hope_thread/containers/hashmap/hash_set.h"
+#include "hope_thread/containers/hashmap/hash_map.h"
+#include "hope_thread/synchronization/spinlock.h"
 
 #include <mutex>
 #include <shared_mutex>
 
 template<typename TValue>
-using storage_t = jt::hash_set<TValue>;
+using storage_t = hope::threading::hash_set<TValue>;
 
 template<typename TStorage, typename TPostFunction, typename... TFunction>
 void perform_work(std::size_t threads_count, std::size_t elements_count, 
@@ -104,7 +104,7 @@ struct dumb
 };
 
 template<typename TKey, typename TValue>
-using map_t = jt::hash_map<TKey, TValue>;
+using map_t = hope::threading::hash_map<TKey, TValue>;
 
 TEST(HashMapTest, AddFindStatisticTest)
 {

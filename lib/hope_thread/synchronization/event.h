@@ -1,15 +1,15 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
 #pragma once
 
 #include <limits>
-#include "jerk-thread/foundation.h"
+#include "hope_thread/foundation.h"
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <condition_variable>
@@ -18,7 +18,7 @@
 #include "Windows.h"
 #endif
 
-namespace jt {
+namespace hope::threading {
 
     class synchronization_event {
     protected:

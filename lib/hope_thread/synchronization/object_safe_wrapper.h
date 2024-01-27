@@ -1,9 +1,9 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
 #pragma once
@@ -11,9 +11,7 @@
 #include <cassert>
 #include <type_traits>
 
-#include "jerk-thread/synchronization/detector.h"
-
-namespace jt {
+namespace hope::threading {
 
     template<
         typename TObject,
@@ -51,33 +49,25 @@ namespace jt {
 
         template<typename TGuard> // just for sfinae
         void lock_impl(TGuard& guard, bool lock_flag) const {
-            if constexpr (is_detected_v<lock_exclusive_t, TMutex>) {
-                if (lock_flag) {
-                    guard.lock();
-                }
-                else {
-                    guard.unlock();
-                }
+            // "To acquire lock on the object should be implemented global functions:
+            // "lock_exclusive, unlock_exclusive"
+            if (lock_flag) {
+                guard.lock();
             }
             else {
-                assert(false && "To acquire lock on the object should be implemented global functions:"
-                    "lock_exclusive, unlock_exclusive");
+                guard.unlock();
             }
         }
 
         template<typename TGuard> // just for sfinae
         void lock_shared_impl(TGuard& guard, bool lock_flag) const {
-            if (is_detected_v<lock_shared_t, TMutex>) {
-                if (lock_flag) {
-                    guard.lock_shared();
-                }
-                else {
-                    guard.unlock_shared();
-                }
+            // To acquire lock on the object should be implemented global functions:
+            // "lock_shared, unlock_shared"
+            if (lock_flag) {
+                guard.lock_shared();
             }
             else {
-                assert(false && "To acquire lock on the object should be implemented global functions:"
-                    "lock_shared, unlock_shared");
+                guard.unlock_shared();
             }
         }
 

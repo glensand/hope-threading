@@ -1,4 +1,4 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
@@ -21,7 +21,7 @@
 #   define SYSTEM_PAUSE
 #endif
 
-namespace jt {
+namespace hope::threading {
 
     class exponential_backoff final {
     public:

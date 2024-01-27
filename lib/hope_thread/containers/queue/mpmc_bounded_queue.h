@@ -1,18 +1,20 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope_thread
  */
 
 #pragma once
 
 #include <atomic>
-#include "jerk-thread/foundation.h"
 
-namespace jt {
+#include "hope_thread/foundation.h"
 
+namespace hope::threading {
+
+    // i have no idea how it works
     template<typename TItem>
     class mpmc_bounded_queue final {
     public:

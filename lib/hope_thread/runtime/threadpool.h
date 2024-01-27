@@ -1,9 +1,9 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
 #include <vector>
@@ -14,11 +14,12 @@
 #include <cassert>
 #include <mutex>
 
-#include "jerk-thread/synchronization/event.h"
-#include "jerk-thread/synchronization/spinlock.h"
-#include "jerk-thread/containers/queue/mpmc_bounded_queue.h"
+#include "hope_thread/synchronization/event.h"
+#include "hope_thread/synchronization/spinlock.h"
+#include "hope_thread/containers/queue/mpmc_bounded_queue.h"
 
-namespace jt {
+// todo:: even not tested yet, idk what the code is going here...
+namespace hope::threading {
 
     /**
     * Implementation of a queued thread pool.
@@ -71,7 +72,7 @@ namespace jt {
 
             class thread_pool* m_thread_pool;
             std::atomic<work_wrapper*> m_queued_work{nullptr };
-            auto_reset_event wait_event;
+            auto_reset_event wait_event{};
             std::atomic_bool m_time_to_die{ false };
             std::thread m_thread_impl;
 
@@ -83,7 +84,7 @@ namespace jt {
             destroy();
         }
 
-        thread_pool(std::size_t num_threads) {
+        explicit thread_pool(std::size_t num_threads) {
             for (std::size_t i{ 0u }; i < num_threads ; ++i) {
                 // Create a new queued thread
                 auto* new_thread = new(std::nothrow) queued_thread(this);

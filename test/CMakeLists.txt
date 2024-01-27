@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 
-project(jtest)
-set(BINARY jtest)
+project(hope-thread-test)
+set(BINARY hope-thread-test)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

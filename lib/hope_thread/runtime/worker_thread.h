@@ -1,25 +1,27 @@
-/* Copyright (C) 2023 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
  * You should have received a copy of the MIT license with
- * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/jerk-thread
+ * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
 #pragma once
 
 #include <type_traits>
-#include "jerk-thread/containers/queue/spsc_queue.h"
-#include "jerk-thread/synchronization/event.h"
 
-namespace jt {
+#include "hope_thread/containers/queue/spsc_queue.h"
+#include "hope_thread/synchronization/event.h"
+
+// todo:: even not tested yet, idk what the code is going here...
+namespace hope::threading {
 
     namespace detail {
 
         template<typename TPayload, typename TQueued>
         class base_worker {
         public:
-            base_worker(TPayload&& p)
+            explicit base_worker(TPayload&& p)
                 : m_payload(std::move(p))
                 , m_thread_impl([this]{ run(); }) {
             }
@@ -52,7 +54,7 @@ namespace jt {
             spsc_queue<TQueued> m_queued_work;
 
             std::atomic_bool m_launched{ true };
-            auto_reset_event m_job_added;
+            auto_reset_event m_job_added{};
         };
 
         using worker_function_t = std::function<void()>;
