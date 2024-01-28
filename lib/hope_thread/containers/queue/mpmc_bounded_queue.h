@@ -89,12 +89,13 @@ namespace hope::threading {
         }
 
     private:
-        struct cell final {
+        constexpr std::size_t static cacheline_size = 64;
+
+        struct alignas(cacheline_size) cell final {
             std::atomic<std::size_t> sequence;
             TItem data;
         };
 
-        constexpr std::size_t static cacheline_size = 64;
         using padding_t = uint8_t[cacheline_size];
 
         padding_t m_padding0 { };
