@@ -58,7 +58,7 @@ namespace hope::threading {
           T value;
         };
 
-        const std::size_t m_buffer_mask;
+        const std::size_t m_buffer_mask{ 0 };
         const std::size_t m_buffer_size{ 0 };
 
         std::size_t m_head{ 0 };
