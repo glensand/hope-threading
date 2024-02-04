@@ -18,6 +18,32 @@ namespace hope::threading {
 
         HOPE_THREADING_CONSTRUCTABLE_ONLY(linked_list)
 
+        void push_head(const T& val) {
+            auto* new_node = new node{ val, nullptr };
+            new_node->next = head;
+            head = new_node;
+        }
+
+        T pop_head() {
+            if (head == nullptr) {
+                return {};
+            }
+
+            auto* node = head;
+            head = head->next;
+            auto val = std::move(node->value);
+            delete node;
+            return node;
+        }
+
+    private:
+
+        struct node {
+            T value;
+            node* next;
+        };
+
+        node* head;
     };
 
 }
