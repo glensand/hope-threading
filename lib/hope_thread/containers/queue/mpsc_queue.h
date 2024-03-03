@@ -23,8 +23,7 @@ namespace hope::threading {
     template<typename TItem, alloc_policy policy = alloc_policy::new_only>
     class mpsc_queue final {
     public:
-        DECLARE_EXPLICIT_DEFAULT_MOVABLE(mpsc_queue);
-        DECLARE_NON_COPYABLE(mpsc_queue);
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(mpsc_queue);
 
         explicit mpsc_queue() {
             m_head = m_tail = m_buffer_head = new node();

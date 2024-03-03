@@ -16,6 +16,8 @@
 #include <mutex>
 #else
 #include "Windows.h"
+#undef min
+#undef max
 #endif
 
 namespace hope::threading {
@@ -34,7 +36,7 @@ namespace hope::threading {
 #endif
         }
     public:
-        DECLARE_CONSTRUCTABLE_ONLY(synchronization_event);
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(synchronization_event);
         virtual ~synchronization_event() noexcept {
 #if defined(_WIN32) || defined(_WIN64)
             CloseHandle(m_event);
@@ -77,7 +79,7 @@ namespace hope::threading {
 
     class auto_reset_event final : public synchronization_event {
     public:
-        DECLARE_CONSTRUCTABLE_ONLY(auto_reset_event);
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(auto_reset_event);
         auto_reset_event()
             : synchronization_event(policy::Auto) {}
         virtual ~auto_reset_event() override = default;
@@ -85,7 +87,7 @@ namespace hope::threading {
 
     class manual_reset_event final : public synchronization_event {
     public:
-        DECLARE_CONSTRUCTABLE_ONLY(manual_reset_event);
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(manual_reset_event);
         manual_reset_event()
             : synchronization_event(policy::Manual) {}
         virtual ~manual_reset_event() override = default;

@@ -16,11 +16,7 @@ namespace hope::threading {
     class spsc_queue final {
     public:
 
-        spsc_queue(spsc_queue const&) = delete;
-        spsc_queue& operator = (spsc_queue const&) = delete;
-
-        spsc_queue(spsc_queue&& queue) = default;
-        spsc_queue& operator=(spsc_queue&& queue) = default;
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(spsc_queue)
 
         explicit spsc_queue(std::size_t pre_alloc = 0) {
             node* n = new node;

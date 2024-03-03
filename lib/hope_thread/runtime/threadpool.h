@@ -6,7 +6,8 @@
  * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
-#include <vector>
+#pragma once
+
 #include <functional>
 #include <thread>
 #include <deque>
@@ -25,13 +26,14 @@ namespace hope::threading {
     * Implementation of a queued thread pool.
     */
     class thread_pool final {
+
         struct work_wrapper final{
             std::function<void()> work_impl;
         };
 
         class queued_thread final {
         public:
-            DECLARE_CONSTRUCTABLE_ONLY(queued_thread);
+            HOPE_THREADING_CONSTRUCTABLE_ONLY(queued_thread)
 
             explicit queued_thread(class thread_pool* tp)
                     : m_thread_pool(tp)
@@ -45,14 +47,14 @@ namespace hope::threading {
             void shutdown() {
                 if (!m_time_to_die.load(std::memory_order_acquire)) {
                     m_time_to_die.store(true, std::memory_order_release);
-                    wait_event.set();
+                    m_wait_event.set();
                     m_thread_impl.join();
                 }
             }
 
             void perform(work_wrapper* w){
                 m_queued_work.store(w, std::memory_order_release);
-                wait_event.set();
+                m_wait_event.set();
             }
 
         private:
@@ -66,19 +68,22 @@ namespace hope::threading {
                         // Let the object cleanup before we remove our ref to it
                         current_work = m_thread_pool->return_or_get(this);
                     }
-                    wait_event.wait();
+                    (void)m_wait_event.wait();
                 }
             }
 
             class thread_pool* m_thread_pool;
             std::atomic<work_wrapper*> m_queued_work{nullptr };
-            auto_reset_event wait_event{};
+            auto_reset_event m_wait_event{};
             std::atomic_bool m_time_to_die{ false };
             std::thread m_thread_impl;
 
             friend class thread_pool;
         };
     public:
+
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(thread_pool)
+
         /** Virtual destructor (cleans up the synchronization objects). */
         ~thread_pool() {
             destroy();
@@ -114,7 +119,7 @@ namespace hope::threading {
 
             // Delete all threads
             const std::lock_guard lock(m_queue_guard);
-            for (auto* thread : m_all_threads)
+            for (const auto* thread : m_all_threads)
                 delete thread;
 
             work_wrapper* w;

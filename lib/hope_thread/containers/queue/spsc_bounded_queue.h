@@ -17,14 +17,12 @@ namespace hope::threading {
     class spsc_bounded_queue final {
     public:
 
-        spsc_bounded_queue(spsc_bounded_queue const&) = delete;
-        spsc_bounded_queue& operator = (spsc_bounded_queue const&) = delete;
-        spsc_bounded_queue(spsc_bounded_queue&& queue) = delete;
-        spsc_bounded_queue& operator=(spsc_bounded_queue&& queue) = delete;
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(spsc_bounded_queue)
+        ~spsc_bounded_queue() = default;
 
         explicit spsc_bounded_queue(std::size_t buffer_size)
-            : m_buffer_size(buffer_size)
-            , m_buffer_mask(buffer_size - 1){
+            : m_buffer_mask(buffer_size - 1)
+            , m_buffer_size(buffer_size){
             assert((buffer_size > 1) && ((buffer_size & (buffer_size - 1)) == 0));
             m_buffer.resize(buffer_size);
         }
@@ -58,16 +56,16 @@ namespace hope::threading {
           T value;
         };
 
-        const std::size_t m_buffer_mask{ 0 };
-        const std::size_t m_buffer_size{ 0 };
+        const std::size_t m_buffer_mask;
+        const std::size_t m_buffer_size;
 
         std::size_t m_head{ 0 };
 
-        const char padding1[64];
+        const char padding1[64]{ };
 
         std::size_t m_tail{ 0 };
 
-        const char padding2[64];
+        const char padding2[64]{ };
 
         std::vector<node> m_buffer;
     };

@@ -27,6 +27,8 @@ template <typename T>
     
     public:
 
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(sutter_queue)
+
         // This queue must be fully constructed before being used in another thread.
         sutter_queue() {
             m_first = m_divider = m_last = new node(T());

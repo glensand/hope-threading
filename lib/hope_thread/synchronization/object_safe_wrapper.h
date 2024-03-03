@@ -48,7 +48,7 @@ namespace hope::threading {
         using lock_shared_t = decltype(std::declval<T>().lock_shared());
 
         template<typename TGuard> // just for sfinae
-        void lock_impl(TGuard& guard, bool lock_flag) const {
+        static void lock_impl(TGuard& guard, bool lock_flag) {
             // "To acquire lock on the object should be implemented global functions:
             // "lock_exclusive, unlock_exclusive"
             if (lock_flag) {
@@ -60,7 +60,7 @@ namespace hope::threading {
         }
 
         template<typename TGuard> // just for sfinae
-        void lock_shared_impl(TGuard& guard, bool lock_flag) const {
+        static void lock_shared_impl(TGuard& guard, bool lock_flag) {
             // To acquire lock on the object should be implemented global functions:
             // "lock_shared, unlock_shared"
             if (lock_flag) {

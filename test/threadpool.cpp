@@ -9,6 +9,12 @@
 #include "gtest/gtest.h"
 #include "hope_thread/runtime/threadpool.h"
 #include "hope_thread/runtime/worker_thread.h"
+#include "hope_thread/containers/queue/mpmc_bounded_queue.h"
+#include "hope_thread/containers/queue/mpsc_bounded_queue.h"
+#include "hope_thread/containers/queue/spsc_bounded_queue.h"
+#include "hope_thread/containers/queue/spsc_queue.h"
+#include "hope_thread/containers/queue/mpsc_queue.h"
+#include "hope_thread/containers/queue/sutter_queue.h"
 
 TEST(ThreadPoolTest, JustAddTasks)
 {

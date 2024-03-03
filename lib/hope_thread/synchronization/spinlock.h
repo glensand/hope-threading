@@ -11,15 +11,16 @@
 #include <atomic>
 #include <cassert>
 
-#include "hope_thread/platform/tls.h"
+#include "hope_thread/core/thread_id.h"
 #include "hope_thread/synchronization/backoff.h"
+#include "hope_thread/foundation.h"
 
 namespace hope::threading {
 
 	class spinlock final {
 	public:
-		spinlock(const spinlock&) = delete;
-		spinlock() = default;
+		HOPE_THREADING_CONSTRUCTABLE_ONLY(spinlock)
+	    HOPE_THREADING_EXPLICIT_DEFAULT_CONSTRUCTABLE(spinlock)
 
 		void lock() {
 			for (;;) {
@@ -33,7 +34,7 @@ namespace hope::threading {
 			}
 		}
 
-		bool TryLock() {
+		bool try_lock() {
 
 			// First do a relaxed load to check if lock is free in order to prevent
 			// unnecessary cache misses if someone does while(!TryLock())
@@ -58,8 +59,8 @@ namespace hope::threading {
 	// The implementation is based off of: https://jfdube.wordpress.com/2014/01/12/optimizing-the-recursive-read-write-spinlock/
 	class rw_spinlock final {
 	public:
-		rw_spinlock(const rw_spinlock&) = delete;
-		rw_spinlock() = default;
+		HOPE_THREADING_CONSTRUCTABLE_ONLY(rw_spinlock)
+	    HOPE_THREADING_EXPLICIT_DEFAULT_CONSTRUCTABLE(rw_spinlock)
 
 		void lock_shared() {
 			for (;;) {
@@ -112,8 +113,8 @@ namespace hope::threading {
 	class recursive_spinlock final {
 		constexpr static uint32_t Free = 0;
 	public:
-		recursive_spinlock(const recursive_spinlock&) = delete;
-		recursive_spinlock() = default;
+		HOPE_THREADING_CONSTRUCTABLE_ONLY(recursive_spinlock)
+	    HOPE_THREADING_EXPLICIT_DEFAULT_CONSTRUCTABLE(recursive_spinlock)
 
 		void lock() {
 			const uint32_t current_thread = get_thread_id();
@@ -181,8 +182,8 @@ namespace hope::threading {
 	// S->X causes deadlock
 	class recursive_rw_spinlock final {
 	public:
-		recursive_rw_spinlock() = default;
-		recursive_rw_spinlock(const recursive_rw_spinlock&) = delete;
+		HOPE_THREADING_CONSTRUCTABLE_ONLY(recursive_rw_spinlock)
+	    HOPE_THREADING_EXPLICIT_DEFAULT_CONSTRUCTABLE(recursive_rw_spinlock)
 
 		void lock_shared() noexcept {
 			if (check_for_recursion()) {
