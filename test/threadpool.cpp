@@ -15,6 +15,8 @@
 #include "hope_thread/containers/queue/spsc_queue.h"
 #include "hope_thread/containers/queue/mpsc_queue.h"
 #include "hope_thread/containers/queue/sutter_queue.h"
+#include "hope_thread/containers/list/linked_list.h"
+#include "hope_thread/synchronization/contention_free_rw_lock.h"
 
 TEST(ThreadPoolTest, JustAddTasks)
 {

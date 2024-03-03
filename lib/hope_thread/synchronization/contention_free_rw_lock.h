@@ -12,8 +12,9 @@
 #include <thread>
 #include <cassert>
 #include <array>
+#include <algorithm>
 
-#include "hope_thread/platform/tls.h"
+#include "hope_thread/core/thread_id.h"
 #include "hope_thread/synchronization/backoff.h"
 
 namespace hope::threading {
@@ -22,7 +23,7 @@ namespace hope::threading {
 	class contention_free_rw_lock final {
     public:
         std::size_t lock_shared() {
-            auto cur_cpu = std::max(get_proc_id(), MaxProcNumber - 1);
+            auto cur_cpu = std::max((int)get_proc_id(), (int)MaxProcNumber - 1);
             assert(cur_cpu < MaxProcNumber);
             for (;;){
                 ++m_read_lock[cur_cpu];
@@ -51,7 +52,7 @@ namespace hope::threading {
             while(!all_free){
                 all_free = true;
                 for (auto&& read_lock : m_read_lock){
-                    all_free & = m_read_lock.load(std::memory_order_acquire);
+                    all_free &= read_lock.load(std::memory_order_acquire);
                     if (!all_free){
                         SYSTEM_PAUSE;
                         break;
