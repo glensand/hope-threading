@@ -10,7 +10,7 @@
 
 #include <atomic>
 
-namespace jt{
+namespace hope::threading {
 
     // load with 'conditional' (data-dependent) memory ordering
     template<typename T>

@@ -13,66 +13,65 @@
 #include "hope_thread/containers/queue/spsc_queue.h"
 #include "hope_thread/synchronization/event.h"
 
-// todo:: even not tested yet, idk what the code is going here...
 namespace hope::threading {
 
-    namespace detail {
-
-        template<typename TPayload, typename TQueued>
-        class base_worker {
-        public:
-            explicit base_worker(TPayload&& p)
-                : m_payload(std::move(p))
-                , m_thread_impl([this]{ run(); }) {
-            }
-
-            void stop(){
-                m_launched.store(false, std::memory_order_release);
-                m_job_added.set();
-                m_thread_impl.join();
-            }
-
-            template<typename TValue>
-            void add(TValue&& v) {
-                m_queued_work.enqueue(std::forward<TValue>(v));
-                m_job_added.set();
-            }
-
-        private:
-            void run(){
-                for(; m_launched.load(std::memory_order_acquire);) {
-                    TQueued queued;
-                    while(m_queued_work.try_dequeue(queued))
-                        m_payload(std::move(queued));
-
-                    (void)m_job_added.wait();
-                }
-            }
-
-            TPayload m_payload;
-            std::thread m_thread_impl;
-            spsc_queue<TQueued> m_queued_work;
-
-            std::atomic_bool m_launched{ true };
-            auto_reset_event m_job_added{};
-        };
-
-        using worker_function_t = std::function<void()>;
-        constexpr static auto&& worker_function = [](worker_function_t&&){};
-
-        using worker_payload_t = std::decay_t<decltype(worker_function)>;
-    }
-
-    class worker_thread final :
-        public detail::base_worker<detail::worker_payload_t, detail::worker_function_t> {
+    template<typename TData>
+    class async_worker {
     public:
+        async_worker() 
+            : m_thread_impl([this]{ run(); }) { }
+
+        template<typename TValue>
+        void add(TValue&& v) {
+            m_queued_work.enqueue(std::forward<TValue>(v));
+            m_job_added.set();
+        }
+
+        void stop(){
+            m_launched.store(false, std::memory_order_release);
+            m_job_added.set();
+            m_thread_impl.join();
+        }
+    protected:
+        virtual void run() = 0;
+
+        std::thread m_thread_impl;
+        
+        alignas(64) std::atomic<bool> m_launched{ false };
+        alignas(64) spsc_queue<TData> m_queued_work;
+        alignas(64) auto_reset_event m_job_added{};
     };
 
-    template<typename TValue>
-    class async_processor final {
+    template<typename TPayload, typename TData>
+    class async_worker_impl final : async_worker<TData> {
     public:
+        explicit async_worker_impl(TPayload&& p, TData = {})
+            : m_payload(std::move(p)) { }
 
     private:
+        virtual void run() override {
+            m_launched = true;
+            for(; m_launched.load(std::memory_order_acquire);) {
+                TData queued;
+                while(this->m_queued_work.try_dequeue(queued))
+                    m_payload(std::move(queued));
 
+                (void)this->m_job_added.wait();
+            }
+        }
+
+        TPayload m_payload;
+
+        std::atomic_bool m_launched{ true };
     };
+
+    template<typename TQueued, typename TPayload>
+    async_worker_impl(TPayload, TQueued)->async_worker_impl<TPayload, TQueued>;
+
+    using worker_function_t = std::function<void()>;
+    static auto&& worker_thread_instance = async_worker_impl(
+        [](worker_function_t&& f) { f(); }, worker_function_t{}
+    ); 
+
+    using worker_thread_t = decltype(worker_thread_instance);
 }
