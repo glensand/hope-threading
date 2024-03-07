@@ -10,6 +10,7 @@
 #include "hope_thread/containers/hashmap/hash_set.h"
 #include "hope_thread/containers/hashmap/hash_map.h"
 #include "hope_thread/synchronization/spinlock.h"
+#include "hope_thread/synchronization/contention_free_rw_lock.h"
 
 #include <mutex>
 #include <shared_mutex>

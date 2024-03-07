@@ -26,11 +26,11 @@ namespace hope::threading {
             auto cur_cpu = std::max((int)get_proc_id(), (int)MaxProcNumber - 1);
             assert(cur_cpu < MaxProcNumber);
             for (;;){
-                ++m_read_lock[cur_cpu];
+                ++m_read_lock[cur_cpu].locked;
                 std::atomic_thread_fence(std::memory_order_seq_cst);
                 if (!m_write_lock.load(std::memory_order_relaxed))
                     break;
-                --m_read_lock[cur_cpu];
+                --m_read_lock[cur_cpu].locked;
                 while (m_write_lock.load(std::memory_order_relaxed))
                     SYSTEM_PAUSE;
             }
@@ -39,7 +39,7 @@ namespace hope::threading {
         }
 
         void unlock_shared(std::size_t cur_cpu){
-            --m_read_lock[cur_cpu];
+            --m_read_lock[cur_cpu].locked;
         }
 
         void lock_exclusive(){
@@ -52,7 +52,7 @@ namespace hope::threading {
             while(!all_free){
                 all_free = true;
                 for (auto&& read_lock : m_read_lock){
-                    all_free &= read_lock.load(std::memory_order_acquire);
+                    all_free &= read_lock.locked.load(std::memory_order_acquire) == 0;
                     if (!all_free){
                         SYSTEM_PAUSE;
                         break;
