@@ -29,7 +29,10 @@ namespace hope::threading {
 
         template<typename TVal>
         bool try_enqueue(TVal&& v) {
-            if (m_head - m_tail > m_buffer_size)
+            // load as volatile to prevent compiler optimization
+            const auto cur_tail = *((const volatile std::size_t*)(&m_tail));
+
+            if (m_head - cur_tail > m_buffer_size)
                 return false;
 
             const auto actual_index = m_head & m_buffer_mask;
@@ -40,7 +43,9 @@ namespace hope::threading {
         }
 
         bool try_dequeue(T& v) {
-            if (m_head == m_tail)
+            // load as volatile to prevent compiler optimization
+            const auto cur_head = *((const volatile std::size_t*)(&m_head));
+            if (cur_head == m_tail)
                 return false;
 
             const auto actual_index = m_tail & m_buffer_mask;
