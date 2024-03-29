@@ -10,6 +10,9 @@
 
 #include <cassert>
 #include <vector>
+#include <atomic>
+
+#include "hope_thread/foundation.h"
 
 namespace hope::threading {
 
@@ -20,7 +23,7 @@ namespace hope::threading {
         HOPE_THREADING_CONSTRUCTABLE_ONLY(spsc_bounded_queue)
         ~spsc_bounded_queue() = default;
 
-        explicit spsc_bounded_queue(std::size_t buffer_size)
+        explicit spsc_bounded_queue(std::size_t buffer_size = 64)
             : m_buffer_mask(buffer_size - 1)
             , m_buffer_size(buffer_size){
             assert((buffer_size > 1) && ((buffer_size & (buffer_size - 1)) == 0));
