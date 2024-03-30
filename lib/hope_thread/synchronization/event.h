@@ -62,7 +62,7 @@ namespace hope::threading {
             return  WaitForSingleObject(m_event, waiting_time) != WAIT_TIMEOUT;
 #else
             std::unique_lock lk(m_mutex);
-            m_cv.wait(lk);
+            m_cv.wait_for(lk, std::chrono::microseconds(waiting_time));
             return true;
 #endif
         }
