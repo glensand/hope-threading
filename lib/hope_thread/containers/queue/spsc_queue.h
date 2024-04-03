@@ -9,6 +9,7 @@
 #pragma once
 
 #include "hope_thread/synchronization/lcsr.h"
+#include "hope_thread/foundation.h"
 
 namespace hope::threading {
 
