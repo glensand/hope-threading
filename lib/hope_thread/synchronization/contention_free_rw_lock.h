@@ -19,6 +19,7 @@
 
 namespace hope::threading {
 
+    // TODO:: make it scalable
     template<std::size_t MaxProcNumber>
 	class contention_free_rw_lock final {
     public:
