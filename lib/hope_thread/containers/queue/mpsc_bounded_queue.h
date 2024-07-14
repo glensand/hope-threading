@@ -32,7 +32,7 @@ namespace hope::threading {
         bool try_enqueue(TVal&& v) {
             auto cur_head = m_head.load(std::memory_order_relaxed);
             while (true){
-                if (cur_head - m_head > m_buffer_size) return false;
+                if (cur_head - m_tail > m_buffer_size) return false;
                 if (m_head.compare_exchange_strong(cur_head, cur_head + 1,
                                                    std::memory_order_relaxed, std::memory_order_relaxed)){
                     break;
