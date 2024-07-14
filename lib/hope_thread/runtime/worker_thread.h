@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <thread>
 #include <type_traits>
 
 #include "hope_thread/containers/queue/spsc_queue.h"
@@ -18,8 +19,8 @@ namespace hope::threading {
     template<typename TData>
     class async_worker {
     public:
-        async_worker() 
-            : m_thread_impl([this]{ run(); }) { }
+        async_worker() = default;
+        virtual ~async_worker() = default;
 
         template<typename TValue>
         void add(TValue&& v) {
@@ -32,8 +33,13 @@ namespace hope::threading {
             m_job_added.set();
             m_thread_impl.join();
         }
+
     protected:
         virtual void run() = 0;
+
+        void start() {
+            m_thread_impl = std::thread([this] { run(); });
+        }
 
         std::thread m_thread_impl;
         
@@ -43,10 +49,15 @@ namespace hope::threading {
     };
 
     template<typename TPayload, typename TData>
-    class async_worker_impl final : async_worker<TData> {
+    class async_worker_impl final : public async_worker<TData> {
     public:
-        explicit async_worker_impl(TPayload&& p, TData = {})
-            : m_payload(std::move(p)) { }
+        async_worker_impl(TPayload p, TData)
+            : m_payload(std::move(p)) 
+        {
+            this->start();
+        }
+
+        async_worker_impl() = default;
 
     private:
         virtual void run() override {
@@ -69,9 +80,8 @@ namespace hope::threading {
     async_worker_impl(TPayload, TQueued)->async_worker_impl<TPayload, TQueued>;
 
     using worker_function_t = std::function<void()>;
-    static auto&& worker_thread_instance = async_worker_impl(
-        [](worker_function_t&& f) { f(); }, worker_function_t{}
-    ); 
 
-    using worker_thread_t = decltype(worker_thread_instance);
+    using worker_thread_t = decltype(async_worker_impl(
+        [](worker_function_t&& f) { f(); }, worker_function_t{}
+    ));
 }

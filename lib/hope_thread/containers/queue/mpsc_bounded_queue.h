@@ -9,23 +9,22 @@
 #pragma once
 
 #include <cassert>
-#include <vector>
+#include <array>
 #include <atomic>
 
 #include "hope_thread/foundation.h"
 
 namespace hope::threading {
 
-    template<typename T>
+    template<typename T, std::size_t Size>
     class mpsc_bounded_queue final {
     public:
         HOPE_THREADING_CONSTRUCTABLE_ONLY(mpsc_bounded_queue)
 
-        explicit mpsc_bounded_queue(std::size_t buffer_size)
-            : m_buffer_mask(buffer_size - 1)
-            , m_buffer_size(buffer_size){
-            assert((buffer_size > 1) && ((buffer_size & (buffer_size - 1)) == 0));
-            m_buffer.resize(buffer_size);
+        explicit mpsc_bounded_queue()
+            : m_buffer_mask(Size - 1)
+            , m_buffer_size(Size){
+            assert((Size > 1) && ((Size & (Size - 1)) == 0));
         }
 
         template<typename TVal>
@@ -79,7 +78,7 @@ namespace hope::threading {
 
         const char padding2[64]{ };
 
-        std::vector<node> m_buffer;
+        std::array<node, Size> m_buffer;
     };
 
 }

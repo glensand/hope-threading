@@ -9,6 +9,7 @@
 #pragma once
 
 #include <limits>
+
 #include "hope_thread/foundation.h"
 
 #if !defined(_WIN32) && !defined(_WIN64)
@@ -22,74 +23,63 @@
 
 namespace hope::threading {
 
-    class synchronization_event {
-    protected:
-        enum class policy : unsigned {
-            Auto,
-            Manual,
-        };
-
-        explicit synchronization_event(policy policy) noexcept {
 #if defined(_WIN32) || defined(_WIN64)
-            m_event = CreateEvent(nullptr, policy != policy::Auto,
-                                  false, nullptr);
-#endif
-        }
+ class synchronization_event {
     public:
+        synchronization_event() noexcept {
+            m_event = CreateEvent(nullptr, false, false, nullptr);
+        }
+
         HOPE_THREADING_CONSTRUCTABLE_ONLY(synchronization_event);
-        virtual ~synchronization_event() noexcept {
-#if defined(_WIN32) || defined(_WIN64)
+        ~synchronization_event() noexcept {
             CloseHandle(m_event);
-#endif
         };
 
         void set() const noexcept {
-#if defined(_WIN32) || defined(_WIN64)
             SetEvent(m_event);
-#else
-            m_cv.notify_one();
-#endif
         }
 
         void reset() const noexcept{
-#if defined(_WIN32) || defined(_WIN64)
             ResetEvent(m_event);
-#endif
         }
 
         bool wait(long waiting_time = std::numeric_limits<long>::max()) const noexcept {
-#if defined(_WIN32) || defined(_WIN64)
             return  WaitForSingleObject(m_event, waiting_time) != WAIT_TIMEOUT;
-#else
-            std::unique_lock lk(m_mutex);
-            m_cv.wait(lk);
-            return true;
-#endif
         }
 
     private:
-#if defined(_WIN32) || defined(_WIN64)
         using handle = void*;
         handle m_event;
+    };
 #else
+ class synchronization_event {
+    public:
+        HOPE_THREADING_CONSTRUCTABLE_ONLY(synchronization_event);
+        synchronization_event() noexcept = default;
+        ~synchronization_event() noexcept = default;
+
+        void set() const noexcept {
+            m_cv.notify_one();
+        }
+
+        bool wait(long waiting_time = -1) const noexcept {
+            std::unique_lock lk(m_mutex);
+            std::chrono::milliseconds delay(waiting_time);
+            if (waiting_time > 0) {
+                m_cv.wait_for(lk, delay);
+            } else {
+                m_cv.wait(lk);
+            }
+
+            return true;
+        }
+
+    private:
         mutable std::condition_variable m_cv;
         mutable std::mutex m_mutex;
+    };
 #endif
-    };
 
-    class auto_reset_event final : public synchronization_event {
-    public:
-        HOPE_THREADING_CONSTRUCTABLE_ONLY(auto_reset_event);
-        auto_reset_event()
-            : synchronization_event(policy::Auto) {}
-        virtual ~auto_reset_event() override = default;
-    };
-
-    class manual_reset_event final : public synchronization_event {
-    public:
-        HOPE_THREADING_CONSTRUCTABLE_ONLY(manual_reset_event);
-        manual_reset_event()
-            : synchronization_event(policy::Manual) {}
-        virtual ~manual_reset_event() override = default;
-    };
+    using auto_reset_event = synchronization_event;
+    using manual_reset_event = synchronization_event;
 }

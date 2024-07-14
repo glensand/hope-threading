@@ -10,6 +10,9 @@
 
 #include <cassert>
 #include <vector>
+#include <atomic>
+
+#include "hope_thread/foundation.h"
 
 namespace hope::threading {
 
@@ -20,7 +23,7 @@ namespace hope::threading {
         HOPE_THREADING_CONSTRUCTABLE_ONLY(spsc_bounded_queue)
         ~spsc_bounded_queue() = default;
 
-        explicit spsc_bounded_queue(std::size_t buffer_size)
+        explicit spsc_bounded_queue(std::size_t buffer_size = 64)
             : m_buffer_mask(buffer_size - 1)
             , m_buffer_size(buffer_size){
             assert((buffer_size > 1) && ((buffer_size & (buffer_size - 1)) == 0));
@@ -29,7 +32,10 @@ namespace hope::threading {
 
         template<typename TVal>
         bool try_enqueue(TVal&& v) {
-            if (m_head - m_tail > m_buffer_size)
+            // load as volatile to prevent compiler optimization
+            const auto cur_tail = *((const volatile std::size_t*)(&m_tail));
+
+            if (m_head - cur_tail > m_buffer_size)
                 return false;
 
             const auto actual_index = m_head & m_buffer_mask;
@@ -40,7 +46,9 @@ namespace hope::threading {
         }
 
         bool try_dequeue(T& v) {
-            if (m_head == m_tail)
+            // load as volatile to prevent compiler optimization
+            const auto cur_head = *((const volatile std::size_t*)(&m_head));
+            if (cur_head == m_tail)
                 return false;
 
             const auto actual_index = m_tail & m_buffer_mask;

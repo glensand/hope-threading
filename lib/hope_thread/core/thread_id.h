@@ -23,15 +23,17 @@ namespace hope::threading {
     inline auto get_thread_id() noexcept {
 #if defined(_WIN32) || defined(_WIN64)
         return (unsigned long)GetCurrentThreadId();
-#else
+#elif !defined(__linux__)
         unsigned long long tid;
         pthread_threadid_np(NULL, &tid);
         return (unsigned long)tid;
+#elif defined(__linux__)
+        return 0;
 #endif
     }
 
     inline auto get_proc_id() noexcept {
-#if defined(__linux) || defined(__linux__)
+#if defined(__linux)
         return sched_getcpu();
 #elif defined(_WIN32) || defined(_WIN64)
         return GetCurrentProcessorNumber();
