@@ -11,7 +11,7 @@
 #include <thread>
 #include <type_traits>
 
-#include "hope_thread/containers/queue/spsc_queue.h"
+#include "hope_thread/containers/queue/mpsc_queue.h"
 #include "hope_thread/synchronization/event.h"
 
 namespace hope::threading {
@@ -44,7 +44,7 @@ namespace hope::threading {
         std::thread m_thread_impl;
         
         alignas(64) std::atomic<bool> m_launched{ false };
-        alignas(64) spsc_queue<TData> m_queued_work;
+        alignas(64) mpsc_queue<TData> m_queued_work;
         alignas(64) auto_reset_event m_job_added{};
     };
 
