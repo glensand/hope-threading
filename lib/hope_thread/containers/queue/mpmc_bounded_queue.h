@@ -11,6 +11,7 @@
 #include <atomic>
 
 #include "hope_thread/foundation.h"
+#include <cassert>
 
 namespace hope::threading {
 
