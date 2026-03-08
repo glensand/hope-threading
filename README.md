@@ -121,6 +121,30 @@ int main() {
 }
 ```
 
+### Contention-free RW lock
+
+`contention_free_rw_lock` is a read-write lock optimized for very frequent reads.
+Readers use per-slot counters (cache-line aligned), and writers wait until all active readers leave.
+
+```cpp
+#include "hope_thread/synchronization/contention_free_rw_lock.h"
+
+int main() {
+    // MaxProcNumber should match your expected maximum parallel execution slots.
+    hope::threading::contention_free_rw_lock<64> rw_lock;
+
+    // Reader path
+    const std::size_t reader_slot = rw_lock.lock_shared();
+    // read shared state...
+    rw_lock.unlock_shared(reader_slot);
+
+    // Writer path
+    rw_lock.lock_exclusive();
+    // modify shared state...
+    rw_lock.unlock_exclusive();
+}
+```
+
 ## License
 
 MIT License. See `LICENSE`.
