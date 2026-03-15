@@ -1,4 +1,4 @@
-/* Copyright (C) 2023-2024 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2026 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
@@ -78,6 +78,7 @@ auto run_test(std::size_t writers_count, std::size_t readers_count, std::size_t 
 }
 
 int main() {
+
     auto&& [r1, w1] = run_test<hope::threading::hash_set<std::string>>(0, 8, 10000000);
     auto&& [r2, w2] = run_test<std::unordered_set<std::string>, false>(0, 8, 10000000);
     auto&& [r3, w3] = run_test<hope::threading::stl_chunked_set<std::string>, false>(0, 8, 10000000);

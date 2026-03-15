@@ -1,4 +1,4 @@
-/* Copyright (C) 2024 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2024 - 2026 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
@@ -7,6 +7,8 @@
  */
 
 #pragma once
+
+#include <algorithm>
 
 #include "hope_thread/foundation.h"
 

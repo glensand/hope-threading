@@ -39,7 +39,7 @@ Project layout:
 
 - `lib/` header-only library target `hope_thread`
 - `samples/` runnable examples
-- `test/` GoogleTest-based test target (`hope-thread-test`)
+- `test/` assert-based test target (`hope-thread-test`)
 
 ## Run tests
 
@@ -48,7 +48,7 @@ cmake --build build --target hope-thread-test -j
 ctest --test-dir build --output-on-failure
 ```
 
-> Tests download GoogleTest at configure time (`test/CMakeLists.txt.in`).
+> Tests are self-contained and rely on standard C++ `assert`.
 
 ## Examples
 

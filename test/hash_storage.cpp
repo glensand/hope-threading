@@ -1,4 +1,4 @@
-/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2026 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
@@ -6,7 +6,11 @@
  * this file. If not, please write to: bezborodoff.gleb@gmail.com, or visit : https://github.com/glensand/hope-threading
  */
 
-#include "gtest/gtest.h"
+#include <cassert>
+#include <algorithm>
+#include <string>
+#include <thread>
+#include <vector>
 #include "hope_thread/containers/hashmap/hash_set.h"
 #include "hope_thread/containers/hashmap/hash_map.h"
 #include "hope_thread/synchronization/spinlock.h"
@@ -43,9 +47,9 @@ void add_find(std::size_t threads_count) {
     perform_work<storage_t<int>>(threads_count, ElementsCount,
         [](const storage_t<int>& storage) {
             for (int i = 0; i < ElementsCount; ++i)
-                ASSERT_TRUE(storage.find(i) != nullptr);
+                assert(storage.find(i) != nullptr);
 
-            ASSERT_TRUE(storage.size() == ElementsCount);
+            assert(storage.size() == ElementsCount);
         }, 
         [](storage_t<int>& storage, int i) {
             storage.emplace(i);
@@ -62,7 +66,7 @@ void add_remove(std::size_t threads_count) {
         [](storage_t<int>& storage) {
             for (int i = 0; i < ElementsCount; ++i)
                 storage.remove(i);
-            ASSERT_TRUE(storage.size() == 0);
+            assert(storage.size() == 0);
         }, 
         [](storage_t<int>& storage, int i) {
             storage.emplace(i);
@@ -76,26 +80,6 @@ void add_remove(std::size_t threads_count) {
     );
 }
 
-TEST(HashStorageTest, AddFindStatisticTest)
-{
-    return;
-    add_find(1);
-    add_find(3);
-    add_find(10);
-    add_find(30);
-    add_find(300);
-}
-
-TEST(HashStorageTest, AddRemove)
-{
-    return;
-    add_remove(1);
-    add_remove(3);
-    add_remove(10);
-    add_remove(30);
-    add_remove(300);
-}
-
 struct dumb
 {
     std::string a, b, c;
@@ -107,14 +91,19 @@ struct dumb
 template<typename TKey, typename TValue>
 using map_t = hope::threading::hash_map<TKey, TValue>;
 
-TEST(HashMapTest, AddFindStatisticTest)
+void run_hash_storage_tests()
 {
     map_t<std::string, dumb> m;
     m.emplace("lol", "a", " ", "-");
     dumb d;
     m.obtain("lol", d);
-    ASSERT_TRUE(d.a == "a");
+    assert(d.a == "a");
     auto&& res = m.get("lol");
     
-    ASSERT_TRUE(res.value().a == "a");
+    assert(res.value().a == "a");
+
+    // The former stress tests for hash_set were explicitly disabled before
+    // and remain disabled here to preserve existing test behavior.
+    (void)add_find;
+    (void)add_remove;
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2026 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
@@ -51,12 +51,12 @@ template <typename T>
         }
     
         bool dequeue(T& item) {
-            auto* divNode = m_divider.load();
-            if (auto * lastNode = m_last.load(); divNode != lastNode)
+            auto* div_node = m_divider.load();
+            if (auto * lastNode = m_last.load(); div_node != lastNode)
             {
-                item = std::move(divNode->next->value);
-                divNode = divNode->next;
-                m_divider.store(divNode);
+                item = std::move(div_node->next->value);
+                div_node = div_node->next;
+                m_divider.store(div_node);
     
                 return true;
             }
@@ -64,10 +64,10 @@ template <typename T>
         }
     
     private:
-        void produce_impl(node* tmpLast) {
-            tmpLast = tmpLast->next;
+        void produce_impl(node* tmp_last) {
+            tmp_last = tmp_last->next;
     
-            m_last.store(tmpLast);
+            m_last.store(tmp_last);
     
             node* div = m_divider.load();
             while (m_first != div) {

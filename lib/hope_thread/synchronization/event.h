@@ -1,4 +1,4 @@
-/* Copyright (C) 2023 - 2024 Gleb Bezborodov - All Rights Reserved
+/* Copyright (C) 2023 - 2026 Gleb Bezborodov - All Rights Reserved
  * You may use, distribute and modify this code under the
  * terms of the MIT license.
  *
@@ -24,6 +24,7 @@
 namespace hope::threading {
 
 #if defined(_WIN32) || defined(_WIN64)
+    // deprecated
  class synchronization_event {
     public:
         synchronization_event() noexcept {
@@ -52,6 +53,7 @@ namespace hope::threading {
         handle m_event;
     };
 #else
+    // deprecated, should not be used since c++20 has its oun easy to use event (waiting at std::atomic)
  class synchronization_event {
     public:
         HOPE_THREADING_CONSTRUCTABLE_ONLY(synchronization_event);
