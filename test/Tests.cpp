@@ -16,6 +16,8 @@
 void run_thread_pool_tests();
 void run_hash_storage_tests();
 void run_async_worker_tests();
+void run_seq_lock_tests();
+void run_spmc_bounded_message_queue_tests();
 
 int main()
 {
@@ -25,6 +27,10 @@ int main()
     run_hash_storage_tests();
     std::cerr << "Running async worker tests..." << std::endl;
     run_async_worker_tests();
+    std::cerr << "Running seq_lock tests..." << std::endl;
+    run_seq_lock_tests();
+    std::cerr << "Running spmc_bounded_message_queue tests..." << std::endl;
+    run_spmc_bounded_message_queue_tests();
 
     std::cerr << "All tests passed" << std::endl;
     return 0;
