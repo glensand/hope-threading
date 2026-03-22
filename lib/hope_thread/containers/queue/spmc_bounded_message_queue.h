@@ -16,7 +16,7 @@
 namespace hope::threading {
 
     template<typename T, std::size_t Size>
-    class spmc_bounded_message_queue final {
+    class alignas(CACHE_LINE_SIZE) spmc_bounded_message_queue final {
         static_assert(Size > 0, "Size must be greater than zero");
         static_assert((Size & (Size - 1)) == 0, "Size must be pow of 2");
     public:
@@ -45,8 +45,8 @@ namespace hope::threading {
         };
 
         bool try_enqueue(const T& item) {
-            auto write_pos = m_writer_pos.load(std::memory_order_acquire) & (Size - 1);
-            m_buffer[write_pos] = item;
+            auto write_pos = m_writer_pos.load(std::memory_order_relaxed);
+            m_buffer[write_pos & (Size - 1)] = item;
             m_writer_pos.store(write_pos + 1, std::memory_order_release);
             return true;
         }
@@ -58,7 +58,10 @@ namespace hope::threading {
     private:
 
         // advanced once writer writes something, 1 element ahead of reader
-        std::atomic<std::size_t> m_writer_pos{ 0 };
+        std::atomic<std::size_t> m_writer_pos{ };
+
+        // not pretty sure if we need it
+        char pad[CACHE_LINE_SIZE]{ };
 
         std::array<T, Size> m_buffer;
 

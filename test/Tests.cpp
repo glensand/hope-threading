@@ -18,6 +18,7 @@ void run_hash_storage_tests();
 void run_async_worker_tests();
 void run_seq_lock_tests();
 void run_spmc_bounded_message_queue_tests();
+void run_interproc_test();
 
 int main()
 {
@@ -31,6 +32,8 @@ int main()
     run_seq_lock_tests();
     std::cerr << "Running spmc_bounded_message_queue tests..." << std::endl;
     run_spmc_bounded_message_queue_tests();
+    std::cout << "Running interproc tests..." << std::endl;
+    run_interproc_test();
 
     std::cerr << "All tests passed" << std::endl;
     return 0;

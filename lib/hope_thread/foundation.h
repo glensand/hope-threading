@@ -49,3 +49,5 @@
 #define HOPE_THREADING_EXPLICIT_DEFAULT_CONSTRUCTABLE(Name) \
     Name() = default; \
     ~Name() = default;
+
+#define CACHE_LINE_SIZE 64
