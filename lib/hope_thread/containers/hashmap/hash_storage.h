@@ -12,6 +12,7 @@
 #include <vector>
 #include <list>
 #include <atomic>
+#include <algorithm>
 
 namespace hope::threading {
 

@@ -32,29 +32,27 @@ namespace hope::threading {
 
         template<typename TVal>
         bool try_enqueue(TVal&& v) {
-            // load as volatile to prevent compiler optimization
-            const auto cur_tail = *((const volatile std::size_t*)(&m_tail));
+            const auto cur_head = m_head.load(std::memory_order_relaxed);
+            const auto cur_tail = m_tail.load(std::memory_order_relaxed);
 
-            if (m_head - cur_tail > m_buffer_size)
+            if (cur_head - cur_tail > m_buffer_size)
                 return false;
 
-            const auto actual_index = m_head & m_buffer_mask;
+            const auto actual_index = cur_head & m_buffer_mask;
             m_buffer[actual_index].value = std::forward<TVal>(v);
-            std::atomic_thread_fence(std::memory_order_seq_cst);
-            ++m_head;
+            m_head.fetch_add(cur_head + 1, std::memory_order_release);
             return true;
         }
 
         bool try_dequeue(T& v) {
-            // load as volatile to prevent compiler optimization
-            const auto cur_head = *((const volatile std::size_t*)(&m_head));
-            if (cur_head == m_tail)
+            const auto cur_head = m_head.load(std::memory_order_relaxed);
+            const auto cur_tail = m_tail.load(std::memory_order_relaxed);
+            if (cur_head == cur_tail)
                 return false;
 
-            const auto actual_index = m_tail & m_buffer_mask;
+            const auto actual_index = cur_tail & m_buffer_mask;
             v = std::move(m_buffer[actual_index].value);
-            std::atomic_thread_fence(std::memory_order_seq_cst);
-            ++m_tail;
+            m_tail.fetch_add(cur_tail + 1, std::memory_order_release);
             return true;
         }
 
@@ -67,11 +65,11 @@ namespace hope::threading {
         const std::size_t m_buffer_mask;
         const std::size_t m_buffer_size;
 
-        std::size_t m_head{ 0 };
+        std::atomic<std::size_t> m_head{ 0 };
 
         const char padding1[64]{ };
 
-        std::size_t m_tail{ 0 };
+        std::atomic<std::size_t> m_tail{ 0 };
 
         const char padding2[64]{ };
 

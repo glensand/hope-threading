@@ -7,13 +7,16 @@
  */
 
 #include <cassert>
-#include <atomic>
+#include <cstdlib>
 #include <iostream>
 #include <thread>
+#include <vector>
+
+#include <unistd.h>
+#include <sys/wait.h>
 
 #include "hope_thread/containers/queue/spmc_bounded_message_queue.h"
 #include "hope_thread/platform/shared_memory.h"
-#include <vector>
 
 void run_interproc_test()
 {
@@ -48,6 +51,7 @@ void run_interproc_test()
         for (auto v : values) {
             queue->try_enqueue(v);
         }
+        std::_Exit(0);
     } else {
         // me - consumer
         hope::threading::platform::shared_memory_segment buffer;
@@ -66,5 +70,7 @@ void run_interproc_test()
             assert(consumed == v);
         }
         std::cout << "All values was consumed" << std::endl;
+        int status = 0;
+        (void)waitpid(pid, &status, 0);
     }
 }

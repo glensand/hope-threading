@@ -40,8 +40,7 @@ namespace hope::threading {
 
             const auto actual_index = cur_head & m_buffer_mask;
             m_buffer[actual_index].value = std::forward<TVal>(v);
-            std::atomic_thread_fence(std::memory_order_seq_cst);
-            m_buffer[actual_index].ready = true;
+            m_buffer[actual_index].ready.store(true, std::memory_order_release);
             return true;
         }
 
@@ -54,8 +53,7 @@ namespace hope::threading {
                 return false;
             }
             v = std::move(m_buffer[actual_index].value);
-            m_buffer[actual_index].ready = false;
-            std::atomic_thread_fence(std::memory_order_seq_cst);
+            m_buffer[actual_index].ready.store(false, std::memory_order_release);
             ++m_tail;
             return true;
         }
@@ -64,7 +62,7 @@ namespace hope::threading {
 
         struct alignas(64) node final {
           T value;
-          bool ready;
+          std::atomic<bool> ready{ false };
         };
 
         const std::size_t m_buffer_mask;

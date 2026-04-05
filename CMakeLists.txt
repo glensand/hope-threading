@@ -9,5 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(test)
 add_subdirectory(samples/sync)
+add_subdirectory(samples/spmc_bounded_non_uniform_queue)
 add_subdirectory(samples/hash_map_perf_test)
 add_subdirectory(lib)
