@@ -19,6 +19,7 @@
 #endif
 #include <windows.h>
 #else
+#include <cstring>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -143,6 +144,27 @@ namespace hope::threading::platform {
 #else
 
     namespace detail {
+#if defined(__APPLE__)
+        inline constexpr std::size_t k_posix_shm_name_max = 31;
+#endif
+
+        inline bool is_valid_shared_memory_name(const char* name) noexcept {
+            if (!name || name[0] != '/') {
+                return false;
+            }
+            for (const char* p = name + 1; *p != '\0'; ++p) {
+                if (*p == '/') {
+                    return false;
+                }
+            }
+#if defined(__APPLE__)
+            if (std::strlen(name) > k_posix_shm_name_max) {
+                return false;
+            }
+#endif
+            return true;
+        }
+
         inline bool map_fd(int fd, std::size_t map_size, shared_memory_segment* out) {
             void* p = ::mmap(nullptr, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
             if (p == MAP_FAILED) {
@@ -158,6 +180,7 @@ namespace hope::threading::platform {
     /**
      * Creates a POSIX shared memory object or opens an existing one, sizes it if new, then mmap.
      * \param name Must start with '/' (e.g. "/myapp_segment") for portable shm_open.
+     *        On macOS the name must be at most 31 characters (including the leading slash).
      * \param size_bytes Size for a new segment; if the object already exists, the existing size is used
      *        and must match \p size_bytes (otherwise the call fails).
      * \param out Filled on success.
@@ -167,39 +190,58 @@ namespace hope::threading::platform {
             return false;
         }
 
-        const int fd = ::shm_open(name, O_RDWR | O_CREAT, 0600);
-        if (fd < 0) {
+        if (!detail::is_valid_shared_memory_name(name)) {
+#if defined(__APPLE__)
+            if (name[0] == '/' && std::strlen(name) > detail::k_posix_shm_name_max) {
+                errno = ENAMETOOLONG;
+            } else {
+                errno = EINVAL;
+            }
+#else
+            errno = EINVAL;
+#endif
             return false;
         }
 
-        struct stat st {};
-        if (::fstat(fd, &st) != 0) {
-            ::close(fd);
-            return false;
-        }
+        for (int attempt = 0; attempt < 2; ++attempt) {
+            const int fd = ::shm_open(name, O_RDWR | O_CREAT, 0600);
+            if (fd < 0) {
+                return false;
+            }
 
-        bool created_new = false;
-        if (st.st_size == 0) {
-            if (::ftruncate(fd, static_cast<off_t>(size_bytes)) != 0) {
+            struct stat st {};
+            if (::fstat(fd, &st) != 0) {
                 ::close(fd);
                 return false;
             }
-            created_new = true;
-        } else {
-            if (static_cast<std::size_t>(st.st_size) != size_bytes) {
+
+            bool created_new = false;
+            if (st.st_size == 0) {
+                if (::ftruncate(fd, static_cast<off_t>(size_bytes)) != 0) {
+                    ::close(fd);
+                    return false;
+                }
+                created_new = true;
+            } else if (static_cast<std::size_t>(st.st_size) != size_bytes) {
                 ::close(fd);
+                if (attempt == 0) {
+                    ::shm_unlink(name);
+                    continue;
+                }
                 errno = EINVAL;
                 return false;
             }
+
+            if (!detail::map_fd(fd, size_bytes, out)) {
+                ::close(fd);
+                return false;
+            }
+
+            out->created_new = created_new;
+            return true;
         }
 
-        if (!detail::map_fd(fd, size_bytes, out)) {
-            ::close(fd);
-            return false;
-        }
-
-        out->created_new = created_new;
-        return true;
+        return false;
     }
 
     inline void close_shared_memory(shared_memory_segment& seg) noexcept {

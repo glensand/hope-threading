@@ -33,17 +33,17 @@ void run_interproc_bounded_non_uniform_queue_test()
     constexpr std::size_t shm_size = sizeof(queue_t) + 4096;
 
     {
-        hope::threading::platform::unlink_shared_memory("/hope-shared_non_uniform_queue_seg");
+        hope::threading::platform::unlink_shared_memory("/hope_shm_nonuniq_seg");
         hope::threading::platform::shared_memory_segment buffer;
-        std::ignore = hope::threading::platform::create_or_open_shared_memory("/hope-shared_non_uniform_queue_seg",
-            shm_size, &buffer);
+        assert(hope::threading::platform::create_or_open_shared_memory("/hope_shm_nonuniq_seg",
+            shm_size, &buffer));
         std::fill(static_cast<char*>(buffer.data), static_cast<char*>(buffer.data) + shm_size, 0);
     }
     const pid_t pid = fork();
     if (pid == 0) {
         hope::threading::platform::shared_memory_segment buffer;
-        std::ignore = hope::threading::platform::create_or_open_shared_memory("/hope-shared_non_uniform_queue_seg",
-            shm_size, &buffer);
+        assert(hope::threading::platform::create_or_open_shared_memory("/hope_shm_nonuniq_seg",
+            shm_size, &buffer));
         auto* queue = new (buffer.data) queue_t();
 
         std::this_thread::sleep_for(std::chrono::seconds(10));
@@ -59,8 +59,8 @@ void run_interproc_bounded_non_uniform_queue_test()
         assert(false && "fork failed");
     } else {
         hope::threading::platform::shared_memory_segment buffer;
-        std::ignore = hope::threading::platform::create_or_open_shared_memory("/hope-shared_non_uniform_queue_seg",
-            shm_size, &buffer);
+        assert(hope::threading::platform::create_or_open_shared_memory("/hope_shm_nonuniq_seg",
+            shm_size, &buffer));
 
         auto* queue = reinterpret_cast<queue_t*>(buffer.data);
         auto reader = queue->create_consumer();

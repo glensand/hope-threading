@@ -55,7 +55,7 @@ namespace hope::threading {
     class async_worker_impl final : public async_worker<TData> {
     public:
         async_worker_impl(TPayload p, TData)
-            : m_payload(std::move(p)) 
+            : m_payload(std::move(p))
         {
             this->start();
         }

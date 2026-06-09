@@ -20,6 +20,8 @@
 
 void run_interproc_test()
 {
+    hope::threading::platform::unlink_shared_memory("/hope-shared_memory_test_seg");
+
     constexpr std::size_t k_capacity = 1024;
 
     std::vector<int> values;
@@ -30,19 +32,18 @@ void run_interproc_test()
     constexpr std::size_t shm_size = sizeof(int) * 1024 + 1024;
 
     {
-        hope::threading::platform::unlink_shared_memory("/hope-shared_memory_test_seg");
         // clear memory
         hope::threading::platform::shared_memory_segment buffer;
-        std::ignore = hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
-            shm_size, &buffer);
+        assert(hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
+            shm_size, &buffer));
         std::fill((char*)buffer.data, (char*)buffer.data + shm_size, 0);
     }
     if (auto pid = fork(); pid == 0) {
         // child - producer
 
         hope::threading::platform::shared_memory_segment buffer;
-        std::ignore = hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
-            shm_size, &buffer);
+        assert(hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
+            shm_size, &buffer));
         using queue_t = hope::threading::spmc_bounded_message_queue<int, k_capacity>;
         auto* queue = new (buffer.data) queue_t();
 
@@ -55,8 +56,8 @@ void run_interproc_test()
     } else {
         // me - consumer
         hope::threading::platform::shared_memory_segment buffer;
-        std::ignore = hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
-            shm_size, &buffer);
+        assert(hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
+            shm_size, &buffer));
 
         using queue_t = hope::threading::spmc_bounded_message_queue<int, k_capacity>;
         auto* queue = (queue_t*)(buffer.data);
