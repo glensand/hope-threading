@@ -222,7 +222,9 @@ namespace hope::threading::platform {
                     return false;
                 }
                 created_new = true;
-            } else if (static_cast<std::size_t>(st.st_size) != size_bytes) {
+            // NOTE: If allocated size is greater then expected one it is ok
+            // OS might allign shared memory segment by page size
+            } else if (static_cast<std::size_t>(st.st_size) < size_bytes) {
                 ::close(fd);
                 if (attempt == 0) {
                     ::shm_unlink(name);

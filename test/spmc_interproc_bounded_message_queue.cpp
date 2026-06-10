@@ -18,9 +18,18 @@
 #include "hope_thread/containers/queue/spmc_bounded_message_queue.h"
 #include "hope_thread/platform/shared_memory.h"
 
+constexpr std::size_t shm_size = 4 * 1024;
+
 void run_interproc_test()
 {
-    hope::threading::platform::unlink_shared_memory("/hope-shared_memory_test_seg");
+    // clear memory
+    {
+        hope::threading::platform::shared_memory_segment buffer;
+        assert(hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
+            shm_size, &buffer));
+        std::fill((char*)buffer.data, (char*)buffer.data + shm_size, 0);
+        hope::threading::platform::unlink_shared_memory("/hope-shared_memory_test_seg");
+    }
 
     constexpr std::size_t k_capacity = 1024;
 
@@ -29,17 +38,10 @@ void run_interproc_test()
         values.push_back(i);
     }
 
-    constexpr std::size_t shm_size = sizeof(int) * 1024 + 1024;
-
-    {
-        // clear memory
-        hope::threading::platform::shared_memory_segment buffer;
-        assert(hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
-            shm_size, &buffer));
-        std::fill((char*)buffer.data, (char*)buffer.data + shm_size, 0);
-    }
     if (auto pid = fork(); pid == 0) {
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         // child - producer
+        std::cout << "Initializing producer\n";
 
         hope::threading::platform::shared_memory_segment buffer;
         assert(hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",
@@ -47,13 +49,14 @@ void run_interproc_test()
         using queue_t = hope::threading::spmc_bounded_message_queue<int, k_capacity>;
         auto* queue = new (buffer.data) queue_t();
 
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-
+        std::cout << "Producing values\n";
         for (auto v : values) {
             queue->try_enqueue(v);
         }
+        std::cout << "Finish producing values\n";
         std::_Exit(0);
     } else {
+         std::cout << "Initializing consumer\nChild proc:" << pid << '\n';
         // me - consumer
         hope::threading::platform::shared_memory_segment buffer;
         assert(hope::threading::platform::create_or_open_shared_memory("/hope-shared_memory_test_seg",

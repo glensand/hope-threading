@@ -39,6 +39,7 @@ void run_interproc_bounded_non_uniform_queue_test()
             shm_size, &buffer));
         std::fill(static_cast<char*>(buffer.data), static_cast<char*>(buffer.data) + shm_size, 0);
     }
+
     const pid_t pid = fork();
     if (pid == 0) {
         hope::threading::platform::shared_memory_segment buffer;
