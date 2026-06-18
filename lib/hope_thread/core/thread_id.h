@@ -38,7 +38,7 @@ namespace hope::threading {
 #elif defined(_WIN32) || defined(_WIN64)
         return GetCurrentProcessorNumber();
 #else
-        return std::rand(); // osx is currently has no support for sched_getcpu
+        return 0; // osx is currently has no support for sched_getcpu
 #endif
     }
 

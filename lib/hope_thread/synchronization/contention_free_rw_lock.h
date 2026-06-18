@@ -24,7 +24,7 @@ namespace hope::threading {
 	class contention_free_rw_lock final {
     public:
         std::size_t lock_shared() {
-            auto cur_cpu = std::max((int)get_proc_id(), (int)MaxProcNumber - 1);
+            auto cur_cpu = std::min((int)get_proc_id(), (int)MaxProcNumber - 1);
             assert(cur_cpu < MaxProcNumber);
             for (;;){
                 ++m_read_lock[cur_cpu].locked;
